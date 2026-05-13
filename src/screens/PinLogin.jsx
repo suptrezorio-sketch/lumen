@@ -17,10 +17,19 @@ export default function PinLogin() {
       // In a real app, this would involve a challenge from the server
       // For this high-fidelity trainer, we simulate the local success of WebAuthn
       // to trigger the system biometric prompt (FaceID/TouchID)
+      const credIdBase64 = localStorage.getItem('lumen_cred_id');
+      let allowCredentials = [];
+      if (credIdBase64) {
+        const binStr = atob(credIdBase64);
+        const credId = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) credId[i] = binStr.charCodeAt(i);
+        allowCredentials = [{ type: 'public-key', id: credId }];
+      }
+
       const credential = await navigator.credentials.get({
         publicKey: {
           challenge: new Uint8Array([1, 2, 3, 4]),
-          allowCredentials: [],
+          allowCredentials,
           userVerification: "required",
         }
       }).catch(e => {

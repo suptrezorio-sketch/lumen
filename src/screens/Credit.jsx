@@ -15,7 +15,7 @@ export default function Credit({ onNavigate }) {
     try {
       const userId = localStorage.getItem('lumen_user_id') || 'test-user';
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-      const res = await fetch(`${backendUrl}/api/credit/request`, {
+      const res = await fetch(`${backendUrl}/admin/credit-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, amount, term, rate, collateral: 'None' })

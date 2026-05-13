@@ -204,6 +204,8 @@ export function AppProvider({ children }) {
 
       const credential = await navigator.credentials.create(createCredentialOptions);
       if (credential) {
+        const credentialIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        localStorage.setItem('lumen_cred_id', credentialIdBase64);
         setBiometric(true);
         localStorage.setItem('lumen_bio', 'true');
         return true;
