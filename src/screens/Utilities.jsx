@@ -109,7 +109,7 @@ export default function Utilities({ onNavigate, showToast }) {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">
-      <div className="sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-md px-5 py-4 flex items-center gap-4 z-20">
+      <div className="sticky top-0 bg-white/80 dark:bg-black/80 px-5 py-4 flex items-center gap-4 z-20">
         <button onClick={() => onNavigate('/')}><Icons.ArrowLeft size={24} className="text-lumen-black dark:text-white" /></button>
         <h2 className="text-xl font-bold text-lumen-black dark:text-white">{t('utilities_screen.title')}</h2>
       </div>

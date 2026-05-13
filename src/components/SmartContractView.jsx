@@ -12,7 +12,7 @@ const SmartContractView = ({ contract, onBack }) => {
       exit={{ opacity: 0, y: 50 }}
       className="fixed inset-0 bg-white z-50 overflow-y-auto pb-24"
     >
-      <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-100 px-5 py-4 z-10">
+      <div className="sticky top-0 bg-white/90 border-b border-gray-100 px-5 py-4 z-10">
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100">
             <Icons.ArrowLeft size={24} />

@@ -116,7 +116,7 @@ export default function Chat({ onNavigate }) {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">
-      <div className="sticky top-0 bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30 safe-top">
+      <div className="sticky top-0 bg-white/90 dark:bg-black/90 border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30 safe-top">
         <div className="flex items-center justify-between">
           <button onClick={() => onNavigate('/')}><Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" /></button>
           <div className="flex items-center gap-3">
@@ -169,7 +169,7 @@ export default function Chat({ onNavigate }) {
         </div>
       )}
 
-      <div className={`p-4 bg-white/90 dark:bg-black/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 flex-shrink-0 ${showKeyboard ? '' : 'safe-bottom'}`}>
+      <div className={`p-4 bg-white/90 dark:bg-black/90 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 ${showKeyboard ? '' : 'safe-bottom'}`}>
         <div className="flex gap-2">
           <div onClick={() => setShowKeyboard(true)}
             className="flex-1 bg-gray-100 dark:bg-[#1C1C1E] rounded-xl px-4 py-3 text-sm text-lumen-black dark:text-white flex items-center overflow-hidden whitespace-nowrap">

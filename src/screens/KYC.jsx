@@ -38,7 +38,7 @@ export default function KYC({ onNavigate }) {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">
-      <div className="sticky top-0 bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
+      <div className="sticky top-0 bg-white/90 dark:bg-black/90 border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
         <div className="flex items-center justify-between">
           <button onClick={() => onNavigate('profile')}><Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" /></button>
           <h2 className="text-base font-bold text-lumen-black dark:text-white">{t('kyc.title')}</h2>
