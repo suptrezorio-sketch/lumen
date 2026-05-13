@@ -6,7 +6,7 @@ import { Icons } from '../assets/Icons';
 const STEPS = ['language', 'register', 'pin', 'confirmPin', 'permissions'];
 
 export default function Onboarding() {
-  const { t, setLang, completeOnboarding, bypassOnboarding, lang } = useApp();
+  const { t, setLang, completeOnboarding, bypassOnboarding, lang, registerBiometric } = useApp();
   const [step, setStep] = useState(0);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -24,7 +24,7 @@ export default function Onboarding() {
     if (STEPS[step] === 'confirmPin') setConfirmPin(confirmPin.slice(0, -1));
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (STEPS[step] === 'language') {
       setLang(selectedLang);
       setStep(1);
@@ -36,6 +36,7 @@ export default function Onboarding() {
       if (confirmPin === pin) { setStep(4); setError(''); }
       else { setError(t('onboarding.pinMismatch')); setConfirmPin(''); }
     } else if (STEPS[step] === 'permissions') {
+      await registerBiometric();
       completeOnboarding(pin, selectedLang, regForm);
     }
   };
