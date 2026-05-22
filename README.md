@@ -52,6 +52,17 @@ Test student PIN: `1388` (syncs test user to CRM).
 | `npm run build` | Production PWA build |
 | `npm run preview` | Preview production build |
 
+
+## First Loadly upload
+
+Native beta install for students uses **Loadly.io** (`.apk` / `.ipa`), not the PWA `dist/` folder. Production web deploy stays on Netlify — see [DEPLOY.md](DEPLOY.md).
+
+1. `npm run build` then `npm run cap:sync`
+2. Build Android APK (see [LOADLY.md](LOADLY.md) — path `android/app/build/outputs/apk/debug/app-debug.apk`)
+3. Drag the APK to [loadly.io](https://loadly.io/) and share the QR / link
+
+Full first-upload checklist (Russian): **[LOADLY.md](LOADLY.md)**.
+
 ## Documentation
 
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — step-by-step build checklist  
