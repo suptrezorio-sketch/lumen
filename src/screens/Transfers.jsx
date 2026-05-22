@@ -110,15 +110,123 @@ function SlideToPay({ onComplete, label, disabled }) {
 
 const SuccessReceipt = ({ data, onBack, t }) => {
   const txId = React.useMemo(() => '#' + Math.random().toString(36).substr(2, 9).toUpperCase(), []);
+  const now = new Date();
   
-  const handleShare = () => {
+  const generateReceiptImage = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const ctx = canvas.getContext('2d');
+    
+    // White background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, 400, 600);
+    
+    // Header
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('LUMEN', 200, 60);
+    
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#666666';
+    ctx.fillText('BANK', 200, 85);
+    
+    // Divider line
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, 110);
+    ctx.lineTo(360, 110);
+    ctx.stroke();
+    
+    // Title
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('TRANSFER RECEIPT', 200, 150);
+    
+    // Date/Time
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#333333';
+    ctx.fillText(now.toLocaleDateString('en-CA', { day: '2-digit', month: '2-digit', year: 'numeric' }), 200, 190);
+    ctx.fillText(now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), 200, 215);
+    
+    // Amount (large)
+    ctx.font = 'bold 48px Arial';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(`$${parseFloat(data.amount).toLocaleString()}`, 200, 290);
+    
+    // Recipient
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#666666';
+    ctx.fillText('TO:', 200, 340);
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(data.recipient, 200, 370);
+    
+    // Status
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = '#00AA00';
+    ctx.fillText('COMPLETED', 200, 430);
+    
+    // Transaction ID
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#333333';
+    ctx.fillText('Transaction ID:', 200, 480);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(txId, 200, 505);
+    
+    // Bottom stamp
+    ctx.strokeStyle = '#CCCCCC';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(60, 530, 280, 50);
+    ctx.font = '12px Arial';
+    ctx.fillStyle = '#999999';
+    ctx.fillText(`Generated: ${now.toISOString().slice(0, 10)}`, 200, 560);
+    
+    return canvas;
+  };
+  
+  const handleShare = async () => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:5001';
+    let blob = null;
+    try {
+      const res = await fetch(`${backendUrl}/api/receipt/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: data.amount, recipient: data.recipient, txId }),
+      });
+      if (res.ok) {
+        const { dataUrl, base64 } = await res.json();
+        const src = dataUrl || `data:image/png;base64,${base64}`;
+        const imgRes = await fetch(src);
+        blob = await imgRes.blob();
+      }
+    } catch (e) {
+      console.warn('Pollinations receipt fallback', e);
+    }
+    if (!blob) {
+      const canvas = generateReceiptImage();
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    }
+    if (blob && navigator.share) {
+      const file = new File([blob], `lumen-receipt-${txId}.png`, { type: 'image/png' });
+      try {
+        await navigator.share({
+          title: 'Lumen Bank - Transfer Receipt',
+          text: `Successfully transferred $${data.amount} to ${data.recipient}`,
+          files: [file],
+        });
+        return;
+      } catch (e) {
+        if (e.name !== 'AbortError') console.log('Share error:', e);
+      }
+    }
     if (navigator.share) {
       navigator.share({
         title: 'Transaction Receipt',
         text: `Successfully transferred $${data.amount} to ${data.recipient}.\nTxID: ${txId}`,
-      }).catch(() => console.log('Share canceled'));
-    } else {
-      alert('Share feature is not supported on this device/browser.');
+      }).catch(() => {});
     }
   };
 
@@ -150,7 +258,7 @@ const SuccessReceipt = ({ data, onBack, t }) => {
 };
 
 export default function Transfers({ onNavigate, showToast }) {
-  const { t, cards, addTransaction } = useApp();
+  const { t, cards, addTransaction, user } = useApp();
   const [transferType, setTransferType] = useState('card'); // 'card' or 'iban'
   const [selectedCardIdx, setSelectedCardIdx] = useState(0);
   const [recipient, setRecipient] = useState('');
@@ -177,22 +285,50 @@ export default function Transfers({ onNavigate, showToast }) {
     }
   };
 
-  const handleOTPVerify = () => {
+  const handleOTPVerify = async () => {
     setShowOTP(false);
-    setIsSuccess(true);
-    showToast(t('common.success'));
     
-    addTransaction({ 
-      type: 'outgoing', 
-      title: transferType === 'card' ? `Transfer to card ...${recipient.slice(-4)}` : `Transfer to ${ibanDetails.name}`, 
-      description: note || 'Transfer', 
-      amount: -parseFloat(amount), 
-      category: 'transfer', 
-      status: 'completed'
-    });
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:5001';
+      const toAccount = transferType === 'card' ? recipient : ibanDetails.iban;
+
+      const response = await fetch(`${backendUrl}/api/v1/transfers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?._id || localStorage.getItem('lumen_user_id'),
+          recipientAccount: toAccount,
+          amount: parseFloat(amount),
+          title: transferType === 'card' ? `Transfer to card ...${recipient.slice(-4)}` : `Transfer to ${ibanDetails.name}`,
+          description: note || 'Transfer',
+          type: 'outgoing',
+          status: 'completed'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        showToast(errorData.error || 'Transfer blocked pending verification');
+        return; // Stop here, scenario engine is handling it
+      }
+
+      setIsSuccess(true);
+      showToast(t('common.success'));
+      
+      addTransaction({ 
+        type: 'outgoing', 
+        title: transferType === 'card' ? `Transfer to card ...${recipient.slice(-4)}` : `Transfer to ${ibanDetails.name}`, 
+        description: note || 'Transfer', 
+        amount: -parseFloat(amount), 
+        category: 'transfer', 
+        status: 'completed'
+      });
+    } catch (e) {
+      showToast('Network error');
+    }
   };
 
-  if (isSuccess) return <SuccessReceipt data={{ amount, recipient: transferType === 'card' ? recipient : ibanDetails.name }} onBack={() => onNavigate('/')} t={t} />;
+  if (isSuccess) return <SuccessReceipt data={{ amount, recipient: transferType === 'card' ? recipient : ibanDetails.name }} onBack={() => onNavigate('/', { replace: true })} t={t} />;
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">
@@ -252,7 +388,7 @@ export default function Transfers({ onNavigate, showToast }) {
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Card Number</label>
               <div className="relative mt-2">
-                <input type="text" value={recipient} onChange={e => handleCardInput(e.target.value)} placeholder="0000 0000 0000 0000"
+                <input type="text" value={recipient.replace(/(\d{4})/g, '$1 ').trim()} onChange={e => handleCardInput(e.target.value)} placeholder="0000 0000 0000 0000"
                   className="w-full p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl text-lg font-mono font-bold text-lumen-black dark:text-white outline-none border-2 border-transparent focus:border-blue-500/30" />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1">
                    <div className="w-8 h-5 bg-orange-500 rounded-sm opacity-50" />

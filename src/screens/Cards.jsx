@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import socket from '../services/socketService';
+import SmartContractView from '../components/SmartContractView';
 
 export default function Cards({ onNavigate, showToast }) {
   const { t, cards, updateCard, user } = useApp();
   const [selectedCard, setSelectedCard] = useState(null);
   const [flippedId, setFlippedId] = useState(null);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [selectedNewCard, setSelectedNewCard] = useState('black');
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).catch(() => {});
@@ -19,6 +23,71 @@ export default function Cards({ onNavigate, showToast }) {
       updateCard(cardId, { blocksCompleted: block });
     }
   };
+
+  useEffect(() => {
+    const onCardBlockSet = (e) => {
+      const payload = e?.detail || {};
+      const { cardId, blocked } = payload;
+
+      if (cardId === undefined) return;
+      updateCard(cardId, { blocked: Boolean(blocked) });
+      showToast?.(Boolean(blocked) ? 'Card blocked' : 'Card unblocked');
+
+      const currentUserId = localStorage.getItem('lumen_user_id') || 'guest';
+      socket.emit('STUDENT_ACTION', {
+        type: 'card_applied',
+        userId: currentUserId,
+        data: { kind: 'block', cardId, blocked: Boolean(blocked) },
+      });
+    };
+
+    const onCardLimitSet = (e) => {
+      const payload = e?.detail || {};
+      const { cardId, dailyLimit, monthlyLimit } = payload;
+
+      if (cardId === undefined) return;
+      updateCard(cardId, { dailyLimit, monthlyLimit });
+      showToast?.('Card limits updated');
+
+      const currentUserId = localStorage.getItem('lumen_user_id') || 'guest';
+      socket.emit('STUDENT_ACTION', {
+        type: 'card_applied',
+        userId: currentUserId,
+        data: {
+          kind: 'limit',
+          cardId,
+          dailyLimit,
+          monthlyLimit,
+        },
+      });
+    };
+
+    const onCardAddApproved = (e) => {
+      const payload = e?.detail || {};
+      const { cardId } = payload;
+
+      if (cardId === undefined) {
+        showToast?.('Add card approved');
+        return;
+      }
+
+      // Minimal implementation: if card already exists locally, refresh blocked->false.
+      // Real “add card” flow needs new card details contract.
+      const existing = cards.find(c => c.id === cardId);
+      if (existing) updateCard(cardId, { blocked: false });
+      showToast?.('Card add approved (minimal)');
+    };
+
+    window.addEventListener('CARD_EVENT_CARD_BLOCK_SET', onCardBlockSet);
+    window.addEventListener('CARD_EVENT_CARD_LIMIT_SET', onCardLimitSet);
+    window.addEventListener('CARD_EVENT_CARD_ADD_APPROVED', onCardAddApproved);
+
+    return () => {
+      window.removeEventListener('CARD_EVENT_CARD_BLOCK_SET', onCardBlockSet);
+      window.removeEventListener('CARD_EVENT_CARD_LIMIT_SET', onCardLimitSet);
+      window.removeEventListener('CARD_EVENT_CARD_ADD_APPROVED', onCardAddApproved);
+    };
+  }, [cards, showToast, updateCard]);
 
   const generateLumePass = async (id, balance, card) => {
     try {
@@ -50,6 +119,10 @@ export default function Cards({ onNavigate, showToast }) {
     const card = cards.find(c => c.id === selectedCard);
     if (!card) { setSelectedCard(null); return null; }
     const isSmart = card.type === 'smart';
+
+    if (isSmart) {
+      return <SmartContractView contract={card} onBack={() => setSelectedCard(null)} />;
+    }
 
     return (
       <div className="h-full overflow-y-auto scrollbar-hide pb-28">
@@ -109,39 +182,10 @@ export default function Cards({ onNavigate, showToast }) {
             </div>
           </div>
 
-          {/* Smart Contract Progress */}
-          {isSmart && (
-            <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-5">
-              <h4 className="text-sm font-bold text-lumen-black dark:text-white mb-4">{t('cards.smartContract')}</h4>
-              <div className="flex items-center gap-2 mb-4">
-                {[1,2,3].map(block => {
-                  const done = block <= card.blocksCompleted;
-                  const next = block === card.blocksCompleted + 1;
-                  return (
-                    <React.Fragment key={block}>
-                      {block > 1 && <div className={`flex-1 h-0.5 ${done ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />}
-                      <motion.div whileTap={next ? { scale: 0.9 } : {}}
-                        onClick={() => handleBlockStep(card.id, block)}
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold cursor-pointer transition-all
-                          ${done ? 'bg-green-500 text-white' : next ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
-                        {done ? <Icons.Check size={16} /> : block}
-                      </motion.div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-              <div className="flex justify-between text-[10px] text-gray-500 px-1">
-                <span>{t('cards.agreement')}</span>
-                <span>{t('cards.verification')}</span>
-                <span>{t('cards.settlement')}</span>
-              </div>
-            </div>
-          )}
+          {/* Smart Contract block removed, moved to SmartContractView.jsx */}
 
           {/* Card Actions */}
-          {!isSmart && (
-            <>
-              <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-4 space-y-3">
+          <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-4 space-y-3">
                 <button onClick={() => copyToClipboard(card.number)}
                   className="w-full flex items-center justify-between p-3 bg-white dark:bg-[#2C2C2E] rounded-xl">
                   <div className="flex items-center gap-3">
@@ -162,8 +206,12 @@ export default function Cards({ onNavigate, showToast }) {
                       <p className="text-[10px] text-gray-400">Allow online payments</p>
                     </div>
                   </div>
-                  <div className="w-10 h-6 bg-green-500 rounded-full relative cursor-pointer" onClick={() => showToast('Internet Purchases updated')}>
-                    <div className="w-4 h-4 bg-white rounded-full absolute right-1 top-1 shadow-sm"></div>
+                  <div className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${card.internetPurchases !== false ? 'bg-green-500' : 'bg-gray-300'}`} 
+                    onClick={() => {
+                      updateCard(card.id, { internetPurchases: card.internetPurchases === false ? true : false });
+                      showToast('Internet Purchases updated');
+                    }}>
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${card.internetPurchases !== false ? 'right-1' : 'left-1'}`}></div>
                   </div>
                 </div>
                 
@@ -177,18 +225,58 @@ export default function Cards({ onNavigate, showToast }) {
                       <p className="text-[10px] text-gray-400">Daily maximum</p>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-lumen-black dark:text-white cursor-pointer" onClick={() => showToast('Transfer Limit UI')}>
-                    $5,000
+                  <span
+                    className="text-sm font-bold text-lumen-black dark:text-white cursor-pointer"
+                    onClick={() => {
+                      const currentLimit = card.dailyLimit || 5000;
+                      const newLimit = window.prompt("Enter requested daily limit:", currentLimit);
+                      if (newLimit && !isNaN(newLimit)) {
+                        const currentUserId = localStorage.getItem('lumen_user_id') || 'guest';
+                        socket.emit('STUDENT_ACTION', {
+                          type: 'card_limit_request',
+                          userId: currentUserId,
+                          data: {
+                            cardId: card.id,
+                            dailyLimit: Number(newLimit),
+                            monthlyLimit: Number(newLimit) * 5,
+                          },
+                        });
+                        showToast(`Limit change to $${newLimit} requested / pending approval`);
+                      }
+                    }}
+                  >
+                    ${(card.dailyLimit || 5000).toLocaleString()}
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <motion.button whileTap={{ scale: 0.98 }}
-                  onClick={() => { updateCard(card.id, { blocked: !card.blocked }); showToast(card.blocked ? 'Card unblocked' : 'Card blocked'); }}
-                  className={`p-4 rounded-2xl flex items-center justify-center gap-2 ${card.blocked ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-gray-50 dark:bg-[#1C1C1E] text-lumen-black dark:text-white border-2 border-transparent hover:border-red-500/20'}`}>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (card.blocked) {
+                      onNavigate('/chat');
+                      return;
+                    }
+                    if (confirm('Are you sure you want to block this card? This action cannot be undone without contacting support.')) {
+                      updateCard(card.id, { blocked: true });
+                      const currentUserId = localStorage.getItem('lumen_user_id') || 'guest';
+                      socket.emit('STUDENT_ACTION', {
+                        type: 'card_block_request',
+                        userId: currentUserId,
+                        data: { cardId: card.id, blocked: true },
+                      });
+                      showToast('Card has been blocked.');
+                    }
+                  }}
+                  className={`p-4 rounded-2xl flex items-center justify-center gap-2 ${
+                    card.blocked
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                      : 'bg-gray-50 dark:bg-[#1C1C1E] text-lumen-black dark:text-white border-2 border-transparent hover:border-red-500/20'
+                  }`}
+                >
                   <Icons.Lock size={20} className={card.blocked ? 'text-red-500' : 'text-gray-500'} />
-                  <span className="text-sm font-bold">{card.blocked ? 'Unblock Card' : t('cards.blockCard')}</span>
+                  <span className="text-sm font-bold">{card.blocked ? 'Contact Support to Unblock' : t('cards.blockCard')}</span>
                 </motion.button>
               </div>
 
@@ -201,8 +289,6 @@ export default function Cards({ onNavigate, showToast }) {
                   {t('cards.addToWallet') || 'Add to Apple Wallet'}
                 </motion.button>
               </div>
-            </>
-          )}
         </div>
       </div>
     );
@@ -212,7 +298,7 @@ export default function Cards({ onNavigate, showToast }) {
     <div className="h-full overflow-y-auto scrollbar-hide pb-28">
       <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30 flex items-center justify-between">
         <h2 className="text-lg font-bold text-lumen-black dark:text-white">{t('cards.title')}</h2>
-        <button onClick={() => showToast('New card flow initiated')} className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+        <button onClick={() => setShowAddCard(true)} className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
           <Icons.Plus size={18} className="text-lumen-black dark:text-white" />
         </button>
       </div>
@@ -255,6 +341,58 @@ export default function Cards({ onNavigate, showToast }) {
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {showAddCard && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              className="w-full max-w-md bg-white dark:bg-[#1C1C1E] rounded-t-3xl p-6 pb-12">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-lumen-black dark:text-white">Request New Card</h3>
+                <button onClick={() => setShowAddCard(false)}><Icons.X size={24} className="text-gray-400" /></button>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">Your request for a new card will be sent to your personal manager for approval.</p>
+              
+              <div className="space-y-4 mb-8">
+                {[
+                  { id: 'black', title: 'LUMEN Black', desc: 'Premium Virtual & Physical' },
+                  { id: 'platinum', title: 'LUMEN Platinum', desc: 'Standard Virtual Card' },
+                  { id: 'crypto', title: 'LUMEN Crypto', desc: 'Direct Wallet Linking' }
+                ].map(opt => (
+                  <button key={opt.id} onClick={() => setSelectedNewCard(opt.id)} className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all ${selectedNewCard === opt.id ? 'border-lumen-black dark:border-white' : 'border-gray-200 dark:border-gray-800'}`}>
+                    <div className="flex items-center gap-3">
+                      <Icons.CreditCard size={24} className={selectedNewCard === opt.id ? 'text-lumen-black dark:text-white' : 'text-gray-400'} />
+                      <div className="text-left">
+                        <p className={`font-bold ${selectedNewCard === opt.id ? 'text-lumen-black dark:text-white' : 'text-gray-500'}`}>{opt.title}</p>
+                        <p className="text-xs text-gray-500">{opt.desc}</p>
+                      </div>
+                    </div>
+                    {selectedNewCard === opt.id && (
+                      <div className="w-6 h-6 rounded-full bg-lumen-black dark:bg-white flex items-center justify-center">
+                        <Icons.Check size={14} className="text-white dark:text-black" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <button onClick={() => {
+                const currentUserId = localStorage.getItem('lumen_user_id') || 'guest';
+                socket.emit('STUDENT_ACTION', {
+                  type: 'card_add_request',
+                  userId: currentUserId,
+                  data: { type: selectedNewCard },
+                });
+                setShowAddCard(false);
+                showToast(`Request for ${selectedNewCard} card sent to bank for approval.`);
+              }} className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold">
+                Submit Request
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

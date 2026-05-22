@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  phone: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // Hashed
   pin: { type: String, required: true },
@@ -13,11 +14,13 @@ const userSchema = new mongoose.Schema({
   kycStatus: { type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none' },
   amlStatus: { type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none' },
   creditStatus: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+  kycSettings: { type: [String], default: [] }, // Array of question IDs visible to the user
+  smartContract: { type: mongoose.Schema.Types.Mixed, default: {} }, // Custom smart contract order details
   createdAt: { type: Date, default: Date.now },
 });
 
 const cardSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   type: { type: String, enum: ['fiat', 'crypto', 'smart'], required: true },
   name: { type: String, required: true },
   number: { type: String, required: true },
@@ -32,7 +35,7 @@ const cardSchema = new mongoose.Schema({
 });
 
 const transactionSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   type: { type: String, enum: ['incoming', 'outgoing'], required: true },
   title: { type: String, required: true },
   description: { type: String },
@@ -45,11 +48,27 @@ const transactionSchema = new mongoose.Schema({
 });
 
 const documentSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   type: { type: String, enum: ['passport', 'id', 'utility_bill', 'other'], required: true },
   fileUrl: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+});
+
+const bannerSchema = new mongoose.Schema({
+  imageUrl: { type: String, required: true }, // Base64 or URL
+  linkType: { type: String, enum: ['url', 'event'], default: 'url' },
+  linkValue: { type: String }, // URL string or event name
+  active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const auditLogSchema = new mongoose.Schema({
+  adminId: { type: String, required: true },
+  action: { type: String, required: true },
+  targetUserId: { type: String },
+  details: { type: mongoose.Schema.Types.Mixed },
+  timestamp: { type: Date, default: Date.now },
 });
 
 module.exports = {
@@ -57,4 +76,6 @@ module.exports = {
   Card: mongoose.model('Card', cardSchema),
   Transaction: mongoose.model('Transaction', transactionSchema),
   Document: mongoose.model('Document', documentSchema),
+  Banner: mongoose.model('Banner', bannerSchema),
+  AuditLog: mongoose.model('AuditLog', auditLogSchema),
 };

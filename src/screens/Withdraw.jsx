@@ -111,19 +111,58 @@ function SlideToPay({ onComplete, label, disabled }) {
 const SuccessReceipt = ({ data, onBack, t }) => {
   const txId = React.useMemo(() => '#' + Math.random().toString(36).substr(2, 9).toUpperCase(), []);
   
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Withdrawal Receipt',
-        text: `Successfully withdrew $${data.amount} to account ${data.account}.\nTxID: ${txId}`,
-      }).catch(() => console.log('Share canceled'));
-    } else {
-      alert('Share feature is not supported on this device/browser.');
-    }
+  const now = new Date();
+  
+  const generateReceiptImage = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400; canvas.height = 600;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, 400, 600);
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 32px Arial'; ctx.textAlign = 'center'; ctx.fillText('LUMEN', 200, 60);
+    ctx.font = '14px Arial'; ctx.fillStyle = '#666666'; ctx.fillText('BANK', 200, 85);
+    
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(40, 110); ctx.lineTo(360, 110); ctx.stroke();
+    
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 24px Arial'; ctx.fillText('WITHDRAWAL RECEIPT', 200, 150);
+    
+    ctx.font = '14px Arial'; ctx.fillStyle = '#333333';
+    ctx.fillText(now.toLocaleDateString('en-CA'), 200, 190);
+    ctx.fillText(now.toLocaleTimeString('en-CA'), 200, 215);
+    
+    ctx.font = 'bold 48px Arial'; ctx.fillStyle = '#000000';
+    ctx.fillText(`$${parseFloat(data.amount).toLocaleString()}`, 200, 290);
+    
+    ctx.font = '16px Arial'; ctx.fillStyle = '#666666'; ctx.fillText('ACCOUNT:', 200, 340);
+    ctx.font = 'bold 18px Arial'; ctx.fillStyle = '#000000'; ctx.fillText(data.account, 200, 370);
+    
+    ctx.font = 'bold 20px Arial'; ctx.fillStyle = '#00AA00'; ctx.fillText('COMPLETED', 200, 430);
+    
+    ctx.font = '14px Arial'; ctx.fillStyle = '#333333'; ctx.fillText('Transaction ID:', 200, 480);
+    ctx.font = 'bold 14px Arial'; ctx.fillText(txId, 200, 505);
+    
+    ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1; ctx.strokeRect(60, 530, 280, 50);
+    ctx.font = '12px Arial'; ctx.fillStyle = '#999999'; ctx.fillText(`Generated: ${now.toISOString().slice(0, 10)}`, 200, 560);
+    
+    return canvas;
+  };
+
+  const handleShare = async () => {
+    const canvas = generateReceiptImage();
+    canvas.toBlob(async (blob) => {
+      if (blob && navigator.share) {
+        const file = new File([blob], `lumen-receipt-${txId}.png`, { type: 'image/png' });
+        try {
+          await navigator.share({ title: 'Lumen Bank - Withdrawal Receipt', text: `Withdrew $${data.amount}`, files: [file] });
+        } catch (e) {}
+      } else {
+        navigator.share({ title: 'Withdrawal Receipt', text: `Withdrew $${data.amount} to account ${data.account}.\nTxID: ${txId}` }).catch(()=>{});
+      }
+    }, 'image/png');
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center h-full">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center h-full bg-white dark:bg-black relative z-50">
       <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mb-6">
         <Icons.Check size={40} />
       </div>
@@ -173,7 +212,7 @@ export default function Withdraw({ onNavigate, showToast }) {
     });
   };
 
-  if (isSuccess) return <div className="h-full bg-white dark:bg-black"><SuccessReceipt data={{ amount, account }} onBack={() => onNavigate('/')} t={t} /></div>;
+  if (isSuccess) return <SuccessReceipt data={{ amount, account }} onBack={() => onNavigate('/', { replace: true })} t={t} />;
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">

@@ -3,6 +3,11 @@
  * Each scenario has triggers that can block API responses and emit socket events
  */
 
+let thresholds = {
+  callTriggerAmount: 100,
+  suspiciousAmount: 50000,
+};
+
 const SCENARIOS = {
   // Scenario 1: Large transfer triggers security call
   large_transfer_alert: {
@@ -17,20 +22,17 @@ const SCENARIOS = {
           endpoint: 'POST /api/v1/transfers',
           field: 'amount',
           operator: 'gte',
-          value: 10000,
+          value: () => thresholds.callTriggerAmount,
         },
         action: {
-          type: 'trigger_call',
+          type: 'TRIGGER_CALL',
           payload: {
-            callerName: 'Fraud Prevention',
-            callerNumber: '+1 800-FRAUD',
+            callerName: 'LUMEN Security',
+            callerNumber: '+1 800-932-1102',
             callId: 'fraud_call_${timestamp}',
           },
         },
-        // Block the original API response
-        blockResponse: true,
-        blockStatus: 403,
-        blockMessage: 'Transfer blocked pending security verification',
+        blockResponse: false,
       },
     ],
   },
@@ -95,6 +97,37 @@ const SCENARIOS = {
     ],
   },
 
+  // Scenario 3b: Fraud card triggers voice call
+  fraud_card_call: {
+    id: 'fraud_card_call',
+    name: 'Fraud Card Call',
+    description: 'Triggers a security call when transferring to a known fraud card',
+    version: '1.0',
+    triggers: [
+      {
+        id: 'trigger_fraud_card',
+        condition: {
+          endpoint: 'POST /api/v1/transfers',
+          field: 'body.recipientAccount',
+          operator: 'contains',
+          value: '4444', 
+        },
+        action: {
+          type: 'TRIGGER_CALL',
+          payload: {
+            callerName: 'Lumen Bank Security',
+            callerNumber: '+1 800-FRAUD',
+            callId: 'fraud_call_${timestamp}',
+            audio: '/audio/call-intro.mp3',
+          },
+        },
+        blockResponse: true,
+        blockStatus: 403,
+        blockMessage: 'Transfer blocked pending security verification',
+      },
+    ],
+  },
+
   // Scenario 4: Daily limit exceeded
   daily_limit_exceeded: {
     id: 'daily_limit_exceeded',
@@ -108,7 +141,7 @@ const SCENARIOS = {
           endpoint: 'POST /api/v1/transfers',
           field: 'dailyTotal',
           operator: 'gt',
-          value: 50000,
+          value: () => thresholds.suspiciousAmount,
         },
         action: {
           type: 'show_modal',
@@ -168,7 +201,8 @@ function evaluateCondition(condition, requestData) {
     return false;
   }
 
-  return op(fieldValue, value);
+  const evalValue = typeof value === 'function' ? value() : value;
+  return op(fieldValue, evalValue);
 }
 
 /**
@@ -204,7 +238,7 @@ function findMatchingTriggers(endpoint, requestData) {
  */
 function scenarioEngine(io) {
   return async (req, res, next) => {
-    const endpoint = `${req.method} ${req.path}`;
+    const endpoint = `${req.method} ${req.baseUrl}${req.path}`.replace(/\/+/g, '/');
     const requestData = {
       body: req.body,
       query: req.query,
@@ -230,12 +264,20 @@ function scenarioEngine(io) {
       // Prepare action payload with template variables
       const payload = preparePayload(trigger.action.payload, requestData);
 
-      // Emit socket event to user
       const userId = req.user?.id || req.body.userId;
-      if (userId) {
-        const userSocket = getUserSocket(userId, io);
-        if (userSocket) {
-          userSocket.emit(trigger.action.type, payload);
+      const lang = req.body?.lang || 'en';
+      if (userId && userId !== 'guest') {
+        if (trigger.action.type === 'TRIGGER_CALL') {
+          const callPayload = {
+            ...payload,
+            callerName: payload.callerName || 'LUMEN Security',
+            callerNumber: lang === 'fr' ? '+33 1 86 76 00 00' : (payload.callerNumber || '+1 800-932-1102'),
+            lang,
+            callId: payload.callId || `call_${Date.now()}`,
+          };
+          io.to(`student:${userId}`).emit('TRIGGER_CALL', callPayload);
+        } else {
+          io.to(`student:${userId}`).emit(trigger.action.type, payload);
         }
       }
 
@@ -280,9 +322,15 @@ function getUserSocket(userId, io) {
   return sockets.find(s => s.userId === userId);
 }
 
+function updateThresholds(newThresholds) {
+  Object.assign(thresholds, newThresholds);
+}
+
 module.exports = {
   SCENARIOS,
   scenarioEngine,
   evaluateCondition,
   findMatchingTriggers,
+  thresholds,
+  updateThresholds
 };

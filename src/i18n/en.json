@@ -10,6 +10,10 @@
     "confirmPinDesc": "Please enter your PIN again",
     "pinMismatch": "PINs do not match. Please try again."
   },
+  "pin": {
+    "locked": "Account temporarily locked. Too many incorrect attempts.",
+    "biometricScanning": "Scanning Face ID..."
+  },
   "common": {
     "next": "Next",
     "confirm": "Confirm",
@@ -18,6 +22,10 @@
     "loading": "Loading...",
     "cancel": "Cancel",
     "save": "Save"
+  },
+  "uilock": {
+    "title": "Technical Works",
+    "message": "We're performing scheduled maintenance. We'll be back shortly."
   },
   "nav": {
     "home": "Home",
@@ -38,6 +46,18 @@
   "profile": {
     "title": "Profile",
     "security": "Security",
+    "pinSecurity": "PIN Security",
+    "changePin": "Change PIN",
+    "currentPin": "Current PIN",
+    "newPin": "New PIN",
+    "savePin": "Save PIN",
+    "pinMismatch": "Wrong PIN. Please try again.",
+    "pinNotSupported": "PIN reset/change is not available on this device.",
+    "pinChangeLocked": "Too many incorrect attempts. Try again later.",
+    "newPinInvalid": "New PIN must be 6 digits.",
+    "forgotPin": "Forgot PIN",
+    "forgotPinBlocked": "Reset is blocked on unregistered devices.",
+    "forgotPinProcessing": "Request sent. Processing...",
     "biometric": "Biometric Login",
     "twoFactor": "Two-Factor Auth",
     "notifications": "Push Notifications",

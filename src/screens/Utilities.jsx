@@ -66,6 +66,85 @@ function OTPModal({ onVerify, onClose, t }) {
   );
 }
 
+const SuccessReceipt = ({ data, onBack, t }) => {
+  const txId = React.useMemo(() => '#' + Math.random().toString(36).substr(2, 9).toUpperCase(), []);
+  const now = new Date();
+  
+  const generateReceiptImage = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, 400, 600);
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 32px Arial'; ctx.textAlign = 'center'; ctx.fillText('LUMEN', 200, 60);
+    ctx.font = '14px Arial'; ctx.fillStyle = '#666666'; ctx.fillText('BANK', 200, 85);
+    
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(40, 110); ctx.lineTo(360, 110); ctx.stroke();
+    
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 24px Arial'; ctx.fillText('UTILITY RECEIPT', 200, 150);
+    
+    ctx.font = '14px Arial'; ctx.fillStyle = '#333333';
+    ctx.fillText(now.toLocaleDateString('en-CA'), 200, 190);
+    ctx.fillText(now.toLocaleTimeString('en-CA'), 200, 215);
+    
+    ctx.font = 'bold 48px Arial'; ctx.fillStyle = '#000000';
+    ctx.fillText(`$${parseFloat(data.amount).toLocaleString()}`, 200, 290);
+    
+    ctx.font = '16px Arial'; ctx.fillStyle = '#666666'; ctx.fillText('PAYMENT TO:', 200, 340);
+    ctx.font = 'bold 18px Arial'; ctx.fillStyle = '#000000'; ctx.fillText(data.recipient, 200, 370);
+    
+    ctx.font = 'bold 20px Arial'; ctx.fillStyle = '#00AA00'; ctx.fillText('COMPLETED', 200, 430);
+    
+    ctx.font = '14px Arial'; ctx.fillStyle = '#333333'; ctx.fillText('Transaction ID:', 200, 480);
+    ctx.font = 'bold 14px Arial'; ctx.fillText(txId, 200, 505);
+    
+    ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1; ctx.strokeRect(60, 530, 280, 50);
+    ctx.font = '12px Arial'; ctx.fillStyle = '#999999'; ctx.fillText(`Generated: ${now.toISOString().slice(0, 10)}`, 200, 560);
+    
+    return canvas;
+  };
+  
+  const handleShare = async () => {
+    const canvas = generateReceiptImage();
+    canvas.toBlob(async (blob) => {
+      if (blob && navigator.share) {
+        const file = new File([blob], `lumen-receipt-${txId}.png`, { type: 'image/png' });
+        try {
+          await navigator.share({ title: 'Lumen Bank - Utility Receipt', text: `Paid $${data.amount} for ${data.recipient}`, files: [file] });
+        } catch (e) {}
+      } else {
+        navigator.share({ title: 'Utility Receipt', text: `Paid $${data.amount} for ${data.recipient}.\nTxID: ${txId}` }).catch(()=>{});
+      }
+    }, 'image/png');
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center h-full bg-white dark:bg-black relative z-50">
+      <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mb-6">
+        <Icons.Check size={40} />
+      </div>
+      <h2 className="text-2xl font-bold text-lumen-black dark:text-white mb-2">{t('common.success')}</h2>
+      <p className="text-gray-500 mb-8">Your utility payment has been successfully processed.</p>
+      
+      <div className="w-full bg-gray-50 dark:bg-[#1C1C1E] rounded-3xl p-6 space-y-4 mb-8">
+        <div className="flex justify-between text-sm"><span className="text-gray-500">{t('transfers.amount')}</span><span className="font-bold text-lumen-black dark:text-white">${parseFloat(data.amount).toLocaleString()}</span></div>
+        <div className="flex justify-between text-sm"><span className="text-gray-500">Service</span><span className="font-bold text-lumen-black dark:text-white">{data.recipient}</span></div>
+        <div className="flex justify-between text-sm"><span className="text-gray-500">{t('history.txId')}</span><span className="font-mono font-bold text-lumen-black dark:text-white">{txId}</span></div>
+      </div>
+
+      <div className="w-full space-y-3 mt-auto">
+        <button onClick={handleShare} className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold flex items-center justify-center gap-2">
+          <Icons.Share size={20} /> {t('common.share')}
+        </button>
+        <button onClick={onBack} className="w-full py-4 bg-gray-100 dark:bg-gray-800 text-lumen-black dark:text-white rounded-2xl font-bold">
+          {t('common.done')}
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function Utilities({ onNavigate, showToast }) {
   const { t, addTransaction } = useApp();
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -101,11 +180,12 @@ export default function Utilities({ onNavigate, showToast }) {
       status: 'completed'
     });
 
-    // IMMEDIATELY navigate home after delay
-    setTimeout(() => {
-      onNavigate('/');
-    }, 1500);
+    // Show receipt instead of navigating away automatically
   };
+
+  if (isDone) {
+    return <SuccessReceipt data={{ amount, recipient: t('history.' + selectedCategory) + ' - ' + phone }} onBack={() => onNavigate('/', { replace: true })} t={t} />;
+  }
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">

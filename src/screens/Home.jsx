@@ -1,22 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import useOrchestratorStore from '../store/orchestratorStore';
 import { Icons } from '../assets/Icons';
 
 export default function Home({ onNavigate, showToast }) {
-  const { t, user, cards, transactions } = useApp();
+  const { t, user, cards, transactions, cryptoAssets } = useApp();
+  const orchestratorBalance = useOrchestratorStore(s => s.balance);
+  const fiatBalance = orchestratorBalance !== null ? orchestratorBalance : user?.balance ?? 0;
+  
+  const cryptoBalance = cards
+    .filter(c => c.type === 'crypto')
+    .reduce((sum, card) => {
+      const asset = cryptoAssets?.find(a => a.symbol === card.currency);
+      const price = asset ? asset.price : 65000;
+      return sum + (Number(card.balance) * price);
+    }, 0);
+    
+  const displayBalance = fiatBalance + cryptoBalance;
+  
   const [bannerIdx, setBannerIdx] = useState(0);
+  const [dynamicBanners, setDynamicBanners] = useState([]);
 
-  const banners = [
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    fetch(`${backendUrl}/api/banners`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) setDynamicBanners(data);
+      })
+      .catch(console.error);
+  }, []);
+
+  const staticBanners = [
     { title: t('home.investorFund'), sub: t('home.investorFundDesc'), bg: 'linear-gradient(135deg,#F0F0F5,#E8E8F0)', icon: <Icons.Shield size={22} className="text-lumen-black" /> },
     { title: t('home.homeInsurance'), sub: t('home.homeInsuranceDesc'), bg: 'linear-gradient(135deg,#FFF5F5,#FFE8E8)', icon: <Icons.Shield size={22} className="text-lumen-black" /> },
     { title: t('home.creditLine'), sub: t('home.creditLineDesc'), bg: 'linear-gradient(135deg,#F5F0FF,#E8E0F0)', icon: <Icons.Percent size={22} className="text-lumen-black" /> },
   ];
 
+  const displayBanners = dynamicBanners.length > 0 ? dynamicBanners : staticBanners;
+
   useEffect(() => {
-    const t = setInterval(() => setBannerIdx(p => (p + 1) % banners.length), 5000);
+    if (displayBanners.length === 0) return;
+    const t = setInterval(() => setBannerIdx(p => (p + 1) % displayBanners.length), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [displayBanners.length]);
 
   const quickActions = [
     { icon: Icons.Send, label: 'Send', screen: '/transfers' },
@@ -54,7 +82,7 @@ export default function Home({ onNavigate, showToast }) {
       <div className="px-5 pt-5 pb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('home.totalBalance')}</p>
         <h1 className="text-4xl font-bold text-lumen-black dark:text-white mt-1">
-          ${user?.balance?.toLocaleString('en-CA', { minimumFractionDigits: 2 }) || '0.00'}
+          ${displayBalance.toLocaleString('en-CA', { minimumFractionDigits: 2 })}
         </h1>
         <div className="flex items-center gap-3 mt-2">
           <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold">
@@ -118,8 +146,44 @@ export default function Home({ onNavigate, showToast }) {
         </div>
       </div>
 
-      {/* Transactions */}
+
+      {/* Ad Banner */}
       <div className="px-5 mb-5">
+        <AnimatePresence mode="wait">
+          {displayBanners.length > 0 && displayBanners[bannerIdx] && (
+            <motion.div key={bannerIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              onClick={() => {
+                const b = displayBanners[bannerIdx];
+                if (b.linkType === 'url' && b.linkValue) window.open(b.linkValue, '_blank');
+                if (b.linkType === 'event' && b.linkValue) onNavigate(b.linkValue);
+              }}
+              className="p-4 rounded-2xl cursor-pointer relative overflow-hidden" 
+              style={{ background: displayBanners[bannerIdx].bg || '#000' }}>
+              
+              {displayBanners[bannerIdx].imageUrl ? (
+                <img src={displayBanners[bannerIdx].imageUrl} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="w-11 h-11 bg-white/80 rounded-xl flex items-center justify-center">{displayBanners[bannerIdx].icon}</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-lumen-black text-sm">{displayBanners[bannerIdx].title}</h4>
+                    <p className="text-[11px] text-lumen-black/60 mt-0.5">{displayBanners[bannerIdx].sub}</p>
+                  </div>
+                  <Icons.ChevronRight size={18} className="text-lumen-black/30" />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="flex justify-center gap-1 mt-2">
+          {displayBanners.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === bannerIdx ? 'bg-lumen-black dark:bg-white w-4' : 'bg-gray-300'}`} />)}
+        </div>
+      </div>
+
+
+
+      {/* Transactions */}
+      <div className="px-5 mb-8">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-base font-bold text-lumen-black dark:text-white">{t('home.recentTransactions')}</h3>
           <button onClick={() => onNavigate('/history')} className="text-xs font-semibold text-blue-500">{t('home.seeAll')}</button>
@@ -145,26 +209,6 @@ export default function Home({ onNavigate, showToast }) {
               </motion.div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Ad Banner */}
-      <div className="px-5 mb-8">
-        <AnimatePresence mode="wait">
-          <motion.div key={bannerIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            className="p-4 rounded-2xl cursor-pointer" style={{ background: banners[bannerIdx].bg }}>
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-white/80 rounded-xl flex items-center justify-center">{banners[bannerIdx].icon}</div>
-              <div className="flex-1">
-                <h4 className="font-bold text-lumen-black text-sm">{banners[bannerIdx].title}</h4>
-                <p className="text-[11px] text-lumen-black/60 mt-0.5">{banners[bannerIdx].sub}</p>
-              </div>
-              <Icons.ChevronRight size={18} className="text-lumen-black/30" />
-            </div>
-          </motion.div>
-        </AnimatePresence>
-        <div className="flex justify-center gap-1 mt-2">
-          {banners.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === bannerIdx ? 'bg-lumen-black dark:bg-white w-4' : 'bg-gray-300'}`} />)}
         </div>
       </div>
     </div>

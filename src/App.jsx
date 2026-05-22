@@ -17,15 +17,18 @@ import Chat from './screens/Chat';
 import Profile from './screens/Profile';
 import TopUp from './screens/TopUp';
 import Withdraw from './screens/Withdraw';
+import KycQuestionnaire from './screens/KycQuestionnaire';
 import AdminPanel from './screens/admin/AdminPanel';
-import ObservationDashboard from './screens/admin/ObservationDashboard';
-
+import AdminLogin from './screens/admin/AdminLogin';
 // Components
 import UILockOverlay from './components/UILockOverlay';
 import VoiceCallOverlay from './components/VoiceCallOverlay';
 import ModalOverlay from './components/ModalOverlay';
 import { useStudentTracker } from './hooks/useStudentTracker';
 import { Icons } from './assets/Icons';
+import AlertOverlay from './components/AlertOverlay';
+import socket from './services/socketService';
+import { connectRealtime } from './lib/realtime';
 import useOrchestratorStore from './store/orchestratorStore';
 
 const TABS = [
@@ -44,7 +47,7 @@ function BottomNav() {
   const activeTab = TABS.find(tab => tab.path === location.pathname)?.id || 'home';
 
   // Hide nav on specific sub-screens or admin routes
-  const hideNavOn = ['/transfers', '/utilities', '/credit', '/chat', '/topup', '/withdraw'];
+  const hideNavOn = ['/transfers', '/utilities', '/credit', '/chat', '/topup', '/withdraw', '/kyc'];
   if (hideNavOn.includes(location.pathname) || location.pathname.startsWith('/admin')) return null;
 
   return (
@@ -101,13 +104,20 @@ const PWAInstallation = () => {
 };
 
 export default function App() {
-  const { onboardingDone, isAuthenticated } = useApp();
+  const { onboardingDone, isAuthenticated, logout } = useApp();
   const [toast, setToast] = useState(null);
+  const [locked, setLocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const forceRedirectPath = useOrchestratorStore(state => state.forceRedirectPath);
 
   useStudentTracker(location.pathname);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const uid = localStorage.getItem('lumen_user_id') || 'guest';
+    connectRealtime(uid);
+  }, [isAuthenticated]);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); };
 
@@ -120,6 +130,27 @@ export default function App() {
        }
     }
   }, [forceRedirectPath, navigate]);
+
+  // Admin remote commands
+  useEffect(() => {
+    const handleForceSignout = () => {
+      logout();
+    };
+    const handleLock = () => {
+      setLocked(true);
+    };
+    const handleUnlock = () => {
+      setLocked(false);
+    };
+    socket.on('FORCE_SIGNOUT', handleForceSignout);
+    socket.on('LOCK_DEVICE', handleLock);
+    socket.on('UNLOCK_DEVICE', handleUnlock);
+    return () => {
+      socket.off('FORCE_SIGNOUT', handleForceSignout);
+      socket.off('LOCK_DEVICE', handleLock);
+      socket.off('UNLOCK_DEVICE', handleUnlock);
+    };
+  }, [logout]);
 
   if (!onboardingDone) return <Onboarding />;
   if (!isAuthenticated) return <PinLogin />;
@@ -142,6 +173,11 @@ export default function App() {
             <Route path="/chat" element={<Chat onNavigate={navigate} showToast={showToast} />} />
             <Route path="/topup" element={<TopUp onNavigate={navigate} />} />
             <Route path="/withdraw" element={<Withdraw onNavigate={navigate} showToast={showToast} />} />
+            <Route path="/kyc" element={<KycQuestionnaire />} />
+            
+            {/* Admin routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/AdminPanel" element={<AdminPanel onNavigate={() => {}} />} />
             
             {/* Fallback for admin routes if hit within App component */}
             <Route path="/admin/*" element={<Navigate to="/admin/AdminPanel" replace />} />
@@ -155,9 +191,19 @@ export default function App() {
       <AnimatePresence>{toast && <Toast message={toast} />}</AnimatePresence>
 
       {/* Overlays */}
+      <AlertOverlay />
       <UILockOverlay />
       <VoiceCallOverlay />
       <ModalOverlay />
+
+      {/* Admin Lock */}
+      {locked && (
+        <div className="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center text-white">
+          <Icons.Lock size={64} className="mb-6 text-red-500" />
+          <h2 className="text-2xl font-bold mb-2">Access Restricted</h2>
+          <p className="text-gray-400 text-sm">Your account has been temporarily locked by administration.</p>
+        </div>
+      )}
     </div>
   );
 }

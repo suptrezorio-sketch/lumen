@@ -10,6 +10,10 @@
     "confirmPinDesc": "Veuillez entrer votre code PIN à nouveau",
     "pinMismatch": "Les codes PIN ne correspondent pas. Veuillez réessayer."
   },
+  "pin": {
+    "locked": "Compte temporairement verrouillé. Trop de tentatives incorrectes.",
+    "biometricScanning": "Scan du Face ID..."
+  },
   "common": {
     "next": "Suivant",
     "confirm": "Confirmer",
@@ -18,6 +22,10 @@
     "loading": "Chargement...",
     "cancel": "Annuler",
     "save": "Enregistrer"
+  },
+  "uilock": {
+    "title": "Travaux techniques",
+    "message": "Maintenance en cours. Nous serons de retour bientôt."
   },
   "nav": {
     "home": "Accueil",
@@ -29,6 +37,18 @@
   "profile": {
     "title": "Profil",
     "security": "Sécurité",
+    "pinSecurity": "Sécurité du code PIN",
+    "changePin": "Changer le code PIN",
+    "currentPin": "Code PIN actuel",
+    "newPin": "Nouveau code PIN",
+    "savePin": "Enregistrer le code PIN",
+    "pinMismatch": "Code PIN incorrect. Veuillez réessayer.",
+    "pinNotSupported": "La réinitialisation/le changement du code PIN n'est pas disponible sur cet appareil.",
+    "pinChangeLocked": "Trop de tentatives incorrectes. Veuillez réessayer plus tard.",
+    "newPinInvalid": "Le nouveau code PIN doit contenir 6 chiffres.",
+    "forgotPin": "Mot de passe oublié (PIN)",
+    "forgotPinBlocked": "La réinitialisation est bloquée sur les appareils non enregistrés.",
+    "forgotPinProcessing": "Demande envoyée. En cours de traitement...",
     "biometric": "Connexion biométrique",
     "twoFactor": "Authentification à 2 facteurs",
     "notifications": "Notifications push",

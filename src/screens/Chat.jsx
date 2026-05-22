@@ -17,22 +17,35 @@ export default function Chat({ onNavigate }) {
   }, [messages, typing, showKeyboard]);
 
   useEffect(() => {
-    import('../services/socketService').then(({ default: socket }) => {
-      const handleNewMessage = (msg) => {
-        setMessages(p => [...p, { 
-          id: Date.now() + Math.random(), 
-          text: msg.text, 
-          sender: msg.sender || 'agent', 
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) 
-        }]);
-      };
-      
-      socket.on('CHAT_MESSAGE', handleNewMessage);
-      
-      return () => {
-        socket.off('CHAT_MESSAGE', handleNewMessage);
-      };
-    });
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const userId = localStorage.getItem('lumen_user_id');
+    if (userId) {
+      fetch(`${backendUrl}/api/chat?userId=${userId}`)
+        .then((r) => r.ok ? r.json() : [])
+        .then((rows) => {
+          if (Array.isArray(rows) && rows.length) {
+            setMessages(rows.map((m, i) => ({
+              id: m._id || i,
+              text: m.text,
+              sender: m.isAdmin ? 'agent' : 'user',
+              time: new Date(m.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            })));
+          }
+        })
+        .catch(() => {});
+    }
+
+    const onChat = (e) => {
+      const msg = e.detail;
+      setMessages((p) => [...p, {
+        id: Date.now() + Math.random(),
+        text: msg.text,
+        sender: msg.sender || 'agent',
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    };
+    window.addEventListener('LUMEN_CHAT_MESSAGE', onChat);
+    return () => window.removeEventListener('LUMEN_CHAT_MESSAGE', onChat);
   }, []);
 
   const quickReplies = [t('chat.quickBalance'), t('chat.quickCards'), t('chat.quickTransfer'), t('chat.quickOther')];
@@ -46,7 +59,13 @@ export default function Chat({ onNavigate }) {
     
     // Send to backend via socket
     import('../services/socketService').then(({ default: socket }) => {
-      socket.emit('chatMessage', { text, sender: 'user' });
+      const userId = localStorage.getItem('lumen_user_id') || 'guest';
+      socket.emit('chatMessage', { text, sender: 'user', userId });
+      fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, senderId: userId, userId }),
+      }).catch(() => {});
     });
   };
 

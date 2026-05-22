@@ -25,7 +25,13 @@ export default function TopUp({ onNavigate }) {
 
   const handleSubmit = () => {
     setStep('submitting');
-    // Simulation of sending to admin
+    
+    const messageText = `[TOP-UP REQUEST]\nAmount: $${data.amount}\nCountry: ${data.country || 'N/A'}\nCity: ${data.city}\nMethod: ${data.method}`;
+    
+    import('../services/socketService').then(({ default: socket }) => {
+      socket.emit('chatMessage', { text: messageText, sender: 'user' });
+    });
+
     setTimeout(() => {
       setStep('success');
     }, 2000);

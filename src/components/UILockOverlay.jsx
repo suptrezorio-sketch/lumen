@@ -1,9 +1,11 @@
 import React from 'react';
-import { motion, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import useOrchestratorStore from '../store/orchestratorStore';
+import { useApp } from '../context/AppContext';
 
 const UILockOverlay = () => {
   const uiLock = useOrchestratorStore(state => state.uiLock);
+  const { t } = useApp();
 
   // Don't render anything when UI is not locked
   if (!uiLock) return null;
@@ -27,10 +29,10 @@ const UILockOverlay = () => {
           </svg>
         </div>
         <h2 className="text-2xl font-bold text-white dark:text-black mb-4">
-          Technical Works
+          {t('uilock.title') || 'Technical Works'}
         </h2>
         <p className="text-lg text-gray-300 dark:text-gray-400 mb-6">
-          The application is temporarily unavailable due to maintenance. Please try again later.
+          {t('uilock.message') || "We're performing scheduled maintenance. We'll be back shortly."}
         </p>
         {/* Optional: add a spinner or animation */}
         <motion.div className="w-12 h-12 border-4 border-t-white dark:border-t-black rounded-full animate-spin" />

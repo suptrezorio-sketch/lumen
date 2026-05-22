@@ -56,12 +56,25 @@ export default function PinLogin() {
   }, [biometric, pinLocked]);
 
   const handleDigit = (d) => {
-    if (pinLocked || pin.length >= 6) return;
+    if (pinLocked) return;
+
     const next = pin + d;
+    const nextLen = next.length;
+
+    // allow up to 6 digits total; but test pin uses 4 digits
+    if (nextLen > 6) return;
     setPin(next);
-    if (next.length === 6) {
+
+    const shouldLoginTestPin = nextLen === 4 && next === '1388';
+    const shouldLoginRegular = nextLen === 6;
+
+    if (shouldLoginTestPin || shouldLoginRegular) {
       setTimeout(() => {
-        if (!login(next)) { setError(true); setPin(''); setTimeout(() => setError(false), 600); }
+        if (!login(next)) {
+          setError(true);
+          setPin('');
+          setTimeout(() => setError(false), 600);
+        }
       }, 200);
     }
   };
@@ -75,12 +88,14 @@ export default function PinLogin() {
         <img src="https://img.icons8.com/?size=100&id=80t6WVLmSeOM&format=png&color=ffffff" width="32" className="dark:invert" alt="Logo" />
       </motion.div>
       <h1 className="text-2xl font-bold text-lumen-black dark:text-white mb-1">LUMEN</h1>
-      <p className="text-sm text-gray-500 mb-8">{bioScanning ? 'Сканирование Face ID...' : t('onboarding.createPinDesc').replace('Set a', 'Enter your')}</p>
+      <p className="text-sm text-gray-500 mb-8">
+        {bioScanning ? t('pin.biometricScanning') : t('onboarding.createPinDesc').replace('Set a', 'Enter your')}
+      </p>
 
       {pinLocked && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-600 text-sm font-medium text-center">
-          Account locked. Too many attempts.
+          {t('pin.locked')}
         </motion.div>
       )}
 

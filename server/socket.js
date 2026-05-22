@@ -14,6 +14,9 @@ function initializeSocket(httpServer) {
   // Map to store userId -> socket connection
   const userSockets = new Map();
 
+  // Make userSockets accessible to index.js
+  module.exports.userSockets = userSockets;
+
   // Middleware to authenticate user via userId in handshake auth
   io.use((socket, next) => {
     const userId = socket.handshake.auth.userId;
@@ -141,8 +144,22 @@ function initializeSocket(httpServer) {
     });
 
     // Listen for admin commands (from teacher/admin)
-    socket.on("adminCommand", ({ targetUserId, command, data }) => {
+    socket.on("adminCommand", async ({ targetUserId, command, data }) => {
       console.log("Received adminCommand:", { targetUserId, command, data });
+      
+      // Save to Audit Log
+      try {
+        const { AuditLog } = require('./models');
+        await new AuditLog({
+          adminId: userId || 'admin',
+          action: command,
+          targetUserId: targetUserId,
+          details: data
+        }).save();
+      } catch (err) {
+        console.error("Failed to save audit log:", err);
+      }
+
       if (targetUserId === "all") {
         io.emit(command, data);
       } else if (userSockets.has(targetUserId)) {
@@ -161,6 +178,29 @@ function initializeSocket(httpServer) {
         console.log(`Sent ${event} to ${targetUserId}`);
       } else {
         console.warn(`User ${targetUserId} not found`);
+      }
+    });
+
+    // Handle chat messages from student → forward to admins + persist
+    socket.on("chatMessage", async (data) => {
+      if (!isAdmin && userId) {
+        try {
+          const db = require('./db');
+          await db.Message.create({
+            text: data.text,
+            senderId: userId,
+            receiverId: null,
+            isAdmin: false,
+          });
+        } catch (e) {
+          console.warn('chat save', e.message);
+        }
+        io.to('admins').emit('adminChatMessage', {
+          userId,
+          text: data.text,
+          sender: data.sender || 'user',
+          timestamp: new Date().toISOString(),
+        });
       }
     });
 
@@ -198,7 +238,26 @@ function initializeSocket(httpServer) {
     socket.on("MODAL_CLOSED", (data) => {
       io.to('admins').emit("adminModalClosed", { ...data, userId });
     });
+
+    // Handle PONG response from students
+    socket.on("PONG", (data) => {
+      if (studentStates.has(userId)) {
+        studentStates.get(userId).online = true;
+        studentStates.get(userId).lastSeen = new Date().toISOString();
+        if (data.route) studentStates.get(userId).currentRoute = data.route;
+        if (data.balance !== undefined) studentStates.get(userId).balance = data.balance;
+        io.to('admins').emit('STUDENT_UPDATE', {
+          userId,
+          ...studentStates.get(userId),
+        });
+      }
+    });
   });
+
+  // Health check: ping all students every 30 seconds
+  setInterval(() => {
+    io.to('admins').emit('PING_ALL');
+  }, 30000);
 
   return io;
 }

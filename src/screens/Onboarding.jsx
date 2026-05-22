@@ -92,9 +92,8 @@ export default function Onboarding() {
                 {t('onboarding.continue')}
               </motion.button>
               
-              <button onClick={() => bypassOnboarding()} className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest active:text-lumen-black dark:active:text-white">
-                {t('common.login') || 'Sign In'}
-              </button>
+              {/* Вход делается через PIN на отдельном экране. Убираем дублирующую кнопку. */}
+              <div className="mt-4 h-1" />
             </div>
           )}
 

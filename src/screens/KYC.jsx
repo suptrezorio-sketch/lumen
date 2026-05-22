@@ -15,7 +15,8 @@ export default function KYC({ onNavigate }) {
     // Имитация загрузки документа на сервер
     try {
       const userId = localStorage.getItem('lumen_user_id');
-      await fetch('http://localhost:5001/api/documents/upload', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+      await fetch(`${backendUrl}/api/documents/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

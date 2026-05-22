@@ -2,12 +2,31 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import socket from '../services/socketService';
+import { useNavigate } from 'react-router-dom';
 
 export default function Profile({ onNavigate, showToast }) {
-  const { t, user, lang, setLang, darkMode, setDarkMode, biometric, setBiometric, twoFactor, setTwoFactor, notifications, setNotifications, kycStatus, setKycStatus, amlStatus, setAmlStatus, logout, installApp, deferredPrompt } = useApp();
+  const navigate = useNavigate();
+  const {
+    t, user, lang, setLang, darkMode, setDarkMode,
+    biometric, setBiometric, notifications, setNotifications,
+    kycStatus, setKycStatus, amlStatus, setAmlStatus,
+    logout, installApp, deferredPrompt
+  } = useApp();
   const [view, setView] = useState('main');
-  const [kycForm, setKycForm] = useState({ fullName: '', dob: '', address: '', idType: 'passport', idNumber: '' });
-  const [amlForm, setAmlForm] = useState({ occupation: '', sourceOfFunds: 'salary', monthlyIncome: '', purposeOfAccount: 'personal' });
+
+  // PIN change state
+  const deviceCurrentPin = localStorage.getItem('lumen_current_pin') || '';
+  const [changeCurrentPin, setChangeCurrentPin] = useState('');
+  const [changeNewPin, setChangeNewPin] = useState('');
+  const [changeError, setChangeError] = useState('');
+  const pinChangeLockedUntil = Number(localStorage.getItem('lumen_pin_change_locked_until') || '0');
+  const isPinChangeLocked = pinChangeLockedUntil > Date.now();
+
+  // Bank phone (local for now)
+  const [bankPhone, setBankPhone] = useState(() => localStorage.getItem('lumen_bank_phone') || '');
+  const [phoneEditing, setPhoneEditing] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState('');
 
   const Toggle = ({ value, onChange }) => (
     <button onClick={() => onChange(!value)}
@@ -32,108 +51,114 @@ export default function Profile({ onNavigate, showToast }) {
     </div>
   );
 
-  // KYC Form View
-  if (view === 'kyc') {
-    return (
-      <div className="h-full flex flex-col bg-white dark:bg-black">
-        <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
-          <div className="flex items-center justify-between">
-            <button onClick={() => setView('main')}><Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" /></button>
-            <h2 className="text-base font-bold text-lumen-black dark:text-white">{t('profile.kycForm.title')}</h2>
-            <div className="w-6" />
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4 pb-10">
-          {[
-            { key: 'fullName', label: t('profile.kycForm.fullName'), type: 'text' },
-            { key: 'dob', label: t('profile.kycForm.dob'), type: 'date' },
-            { key: 'address', label: t('profile.kycForm.address'), type: 'text' },
-            { key: 'idNumber', label: t('profile.kycForm.idNumber'), type: 'text' },
-          ].map(f => (
-            <div key={f.key}>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{f.label}</label>
-              <input type={f.type} value={kycForm[f.key]} onChange={e => setKycForm({ ...kycForm, [f.key]: e.target.value })}
-                className="w-full mt-1 p-3.5 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-sm text-lumen-black dark:text-white border-0 outline-none" />
-            </div>
-          ))}
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.kycForm.idType')}</label>
-            <div className="grid grid-cols-3 gap-2 mt-1">
-              {['passport', 'driverLicense', 'nationalId'].map(type => (
-                <button key={type} onClick={() => setKycForm({ ...kycForm, idType: type })}
-                  className={`py-2.5 rounded-xl text-xs font-semibold ${kycForm.idType === type ? 'bg-lumen-black dark:bg-white text-white dark:text-black' : 'bg-gray-50 dark:bg-[#1C1C1E] text-gray-600 dark:text-gray-400'}`}>
-                  {t(`profile.kycForm.${type}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => { setKycStatus('pending'); localStorage.setItem('lumen_kyc', 'pending'); setView('main'); showToast(t('common.success')); }}
-            disabled={!kycForm.fullName || !kycForm.idNumber}
-            className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold disabled:opacity-30">
-            {t('profile.kycForm.submit')}
-          </motion.button>
+  const handleChangePin = () => {
+    setChangeError('');
+    if (changeCurrentPin !== deviceCurrentPin) {
+      setChangeError(t('profile.pinMismatch'));
+      setTimeout(() => setChangeError(''), 1200);
+      return;
+    }
+    if (!/^\d{6}$/.test(changeNewPin)) {
+      setChangeError(t('profile.newPinInvalid'));
+      return;
+    }
+    const pinStateRaw = localStorage.getItem('lumen_accounts_by_pin');
+    const pinState = pinStateRaw ? JSON.parse(pinStateRaw) : {};
+    const entry = pinState[deviceCurrentPin];
+    if (entry) {
+      pinState[changeNewPin] = { ...entry };
+      delete pinState[deviceCurrentPin];
+      localStorage.setItem('lumen_accounts_by_pin', JSON.stringify(pinState));
+    }
+    localStorage.setItem('lumen_current_pin', changeNewPin);
+    setChangeCurrentPin('');
+    setChangeNewPin('');
+    showToast(t('common.success'));
+    setView('main');
+  };
+
+
+
+  // ─── Security View ────────────────────────────────────────
+  if (view === 'security') return (
+    <div className="h-full flex flex-col bg-white dark:bg-black">
+      <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setView('main')}><Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" /></button>
+          <h2 className="text-base font-bold text-lumen-black dark:text-white">Security</h2>
+          <div className="w-6" />
         </div>
       </div>
-    );
-  }
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-5 pb-10">
 
-  // AML Form View
-  if (view === 'aml') {
-    return (
-      <div className="h-full flex flex-col bg-white dark:bg-black">
-        <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
-          <div className="flex items-center justify-between">
-            <button onClick={() => setView('main')}><Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" /></button>
-            <h2 className="text-base font-bold text-lumen-black dark:text-white">{t('profile.amlForm.title')}</h2>
-            <div className="w-6" />
+        {/* Face ID / Biometric */}
+        <div>
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('profile.biometric')}</h4>
+          <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
+            <SettingRow icon={Icons.Fingerprint} label={t('profile.biometric')} border={false}
+              right={<Toggle value={biometric} onChange={setBiometric} />} />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4 pb-10">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.amlForm.occupation')}</label>
-            <input type="text" value={amlForm.occupation} onChange={e => setAmlForm({ ...amlForm, occupation: e.target.value })}
-              className="w-full mt-1 p-3.5 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-sm text-lumen-black dark:text-white border-0 outline-none" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.amlForm.sourceOfFunds')}</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              {['salary', 'business', 'investments', 'other'].map(src => (
-                <button key={src} onClick={() => setAmlForm({ ...amlForm, sourceOfFunds: src })}
-                  className={`py-2.5 rounded-xl text-xs font-semibold ${amlForm.sourceOfFunds === src ? 'bg-lumen-black dark:bg-white text-white dark:text-black' : 'bg-gray-50 dark:bg-[#1C1C1E] text-gray-600 dark:text-gray-400'}`}>
-                  {t(`profile.amlForm.${src}`)}
-                </button>
-              ))}
+
+        {/* Change PIN */}
+        <div>
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('profile.changePin')}</h4>
+          <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-4 space-y-3">
+            {isPinChangeLocked && (
+              <p className="text-xs text-red-500 font-bold text-center">{t('profile.pinChangeLocked')}</p>
+            )}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.currentPin')}</label>
+              <input inputMode="numeric" type="password" value={changeCurrentPin}
+                onChange={e => setChangeCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                disabled={isPinChangeLocked}
+                className="w-full p-3.5 bg-white dark:bg-black rounded-xl text-sm border border-gray-200 dark:border-gray-800 outline-none text-lumen-black dark:text-white" />
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.amlForm.monthlyIncome')}</label>
-            <input type="text" value={amlForm.monthlyIncome} onChange={e => setAmlForm({ ...amlForm, monthlyIncome: e.target.value })} placeholder="$0 - $10,000"
-              className="w-full mt-1 p-3.5 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-sm text-lumen-black dark:text-white border-0 outline-none" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.amlForm.purposeOfAccount')}</label>
-            <div className="grid grid-cols-3 gap-2 mt-1">
-              {['personal', 'businessUse', 'savings'].map(p => (
-                <button key={p} onClick={() => setAmlForm({ ...amlForm, purposeOfAccount: p })}
-                  className={`py-2.5 rounded-xl text-xs font-semibold ${amlForm.purposeOfAccount === p ? 'bg-lumen-black dark:bg-white text-white dark:text-black' : 'bg-gray-50 dark:bg-[#1C1C1E] text-gray-600 dark:text-gray-400'}`}>
-                  {t(`profile.amlForm.${p}`)}
-                </button>
-              ))}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('profile.newPin')}</label>
+              <input inputMode="numeric" type="password" value={changeNewPin}
+                onChange={e => setChangeNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                disabled={isPinChangeLocked}
+                placeholder="6 digits"
+                className="w-full p-3.5 bg-white dark:bg-black rounded-xl text-sm border border-gray-200 dark:border-gray-800 outline-none text-lumen-black dark:text-white" />
             </div>
+            {changeError && <p className="text-red-500 text-xs font-bold text-center">{changeError}</p>}
+            <motion.button whileTap={{ scale: 0.97 }} onClick={handleChangePin} disabled={isPinChangeLocked}
+              className="w-full py-3.5 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold disabled:opacity-30">
+              {t('profile.savePin')}
+            </motion.button>
           </div>
-          <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => { setAmlStatus('pending'); localStorage.setItem('lumen_aml', 'pending'); setView('main'); showToast(t('common.success')); }}
-            disabled={!amlForm.occupation}
-            className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold disabled:opacity-30">
-            {t('profile.amlForm.submit')}
-          </motion.button>
+        </div>
+
+        {/* Bank Phone Number */}
+        <div>
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Bank Phone Number</h4>
+          <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-4 space-y-3">
+            <p className="text-xs text-gray-500">Used for verification and bank communications (Telegram coming soon)</p>
+            {phoneEditing ? (
+              <div className="space-y-2">
+                <input type="tel" value={phoneDraft} onChange={e => setPhoneDraft(e.target.value)} placeholder="+1 (555) 000-0000"
+                  className="w-full p-3.5 bg-white dark:bg-black rounded-xl text-sm border border-gray-200 dark:border-gray-800 outline-none text-lumen-black dark:text-white" />
+                <div className="flex gap-2">
+                  <button onClick={() => { setBankPhone(phoneDraft); localStorage.setItem('lumen_bank_phone', phoneDraft); setPhoneEditing(false); showToast(t('common.success')); }}
+                    className="flex-1 py-3 bg-lumen-black dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm">Save</button>
+                  <button onClick={() => setPhoneEditing(false)} className="flex-1 py-3 bg-gray-200 dark:bg-gray-800 text-lumen-black dark:text-white rounded-xl font-bold text-sm">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-lumen-black dark:text-white">{bankPhone || 'Not set'}</span>
+                <button onClick={() => { setPhoneDraft(bankPhone); setPhoneEditing(true); }}
+                  className="text-xs font-bold text-blue-500 hover:text-blue-600">Edit</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // Main Settings View
+  // ─── Main View ────────────────────────────────────────────
   return (
     <div className="h-full overflow-y-auto scrollbar-hide pb-28">
       <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
@@ -152,13 +177,13 @@ export default function Profile({ onNavigate, showToast }) {
           </div>
         </div>
 
-        {/* Security */}
+        {/* Security section */}
         <div>
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('profile.security')}</h4>
           <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <SettingRow icon={Icons.Fingerprint} label={t('profile.biometric')} right={<Toggle value={biometric} onChange={setBiometric} />} />
-            <SettingRow icon={Icons.Shield} label={t('profile.twoFactor')} right={<Toggle value={twoFactor} onChange={setTwoFactor} />} />
-            <SettingRow icon={Icons.Bell} label={t('profile.notifications')} right={<Toggle value={notifications} onChange={setNotifications} />} border={false} />
+            <SettingRow icon={Icons.Shield} label={t('profile.security')} onClick={() => setView('security')} />
+            <SettingRow icon={Icons.Bell} label={t('profile.notifications')} border={false}
+              right={<Toggle value={notifications} onChange={setNotifications} />} />
           </div>
         </div>
 
@@ -166,10 +191,10 @@ export default function Profile({ onNavigate, showToast }) {
         <div>
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('profile.verification')}</h4>
           <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <SettingRow icon={Icons.FileText} label={t('profile.kyc')} onClick={() => setView('kyc')}
+            <SettingRow icon={Icons.FileText} label={t('profile.kyc')} onClick={() => navigate('/kyc')}
               right={<div className="flex items-center gap-2"><StatusBadge status={kycStatus} /><Icons.ChevronRight size={14} className="text-gray-300" /></div>} />
-            <SettingRow icon={Icons.Shield} label={t('profile.aml')} onClick={() => setView('aml')}
-              right={<div className="flex items-center gap-2"><StatusBadge status={amlStatus} /><Icons.ChevronRight size={14} className="text-gray-300" /></div>} border={false} />
+            <SettingRow icon={Icons.Shield} label={t('profile.aml')} onClick={() => navigate('/kyc')} border={false}
+              right={<div className="flex items-center gap-2"><StatusBadge status={amlStatus} /><Icons.ChevronRight size={14} className="text-gray-300" /></div>} />
           </div>
         </div>
 
@@ -188,7 +213,7 @@ export default function Profile({ onNavigate, showToast }) {
                   ))}
                 </div>
               } />
-            <SettingRow icon={Icons.Eye} label={t('profile.darkMode')} right={<Toggle value={darkMode} onChange={setDarkMode} />} />
+            <SettingRow icon={Icons.Eye} label={t('profile.darkMode')} right={<Toggle value={darkMode} onChange={setDarkMode} />} border={!deferredPrompt} />
             {deferredPrompt && (
               <SettingRow icon={Icons.Download} label={t('profile.installApp')} onClick={installApp} border={false} />
             )}

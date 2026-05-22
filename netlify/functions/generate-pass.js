@@ -50,7 +50,7 @@ exports.handler = async (event) => {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer ww_live_225f091d1ca8c9dfc1717baa5a51ca49"
+                "Authorization": `Bearer ${process.env.WALLETWALLET_API_KEY || ''}`
             },
             body: JSON.stringify(apiBody)
         });

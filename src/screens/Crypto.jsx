@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { useFiatBalance } from '../hooks/useDisplayBalance';
 import { Icons } from '../assets/Icons';
 
 export default function Crypto({ onNavigate, showToast }) {
-  const { t, cryptoAssets, user } = useApp();
+  const { t, cryptoAssets, user, buyCrypto, swapCrypto, updateUser, addTransaction } = useApp();
+  const fiatBalance = useFiatBalance();
   const [view, setView] = useState('list');
   const [prices, setPrices] = useState(cryptoAssets.map(a => a.price));
   const [buyAsset, setBuyAsset] = useState(null);
@@ -13,24 +15,28 @@ export default function Crypto({ onNavigate, showToast }) {
   const [swapTo, setSwapTo] = useState(1);
   const [swapAmount, setSwapAmount] = useState('');
 
-  // Simulate price changes
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setPrices(prev => prev.map((p, i) => {
-        const change = (Math.random() - 0.5) * p * 0.002;
-        return Math.max(0.01, +(p + change).toFixed(2));
-      }));
-    }, 3000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const totalValue = cryptoAssets.reduce((sum, a, i) => sum + a.holdings * prices[i], 0);
+  // Generate stable sparkline data per asset
+  const [sparkData] = useState(() =>
+    cryptoAssets.map(() => Array.from({ length: 20 }, (_, i) => 30 + Math.sin(i * 0.7) * 20 + Math.random() * 15))
+  );
 
   if (view === 'buy' && buyAsset !== null) {
     const asset = cryptoAssets[buyAsset];
     const price = prices[buyAsset];
     const amt = parseFloat(buyAmount) || 0;
     const youGet = amt > 0 ? (amt / price).toFixed(8) : '0.00000000';
+
+    const handleBuy = () => {
+      if (amt <= 0) return;
+      const ok = buyCrypto(asset.symbol, amt);
+      if (!ok) {
+        showToast('Insufficient funds');
+        return;
+      }
+      showToast(`Bought ${youGet} ${asset.symbol}`);
+      setView('list');
+      setBuyAmount('');
+    };
 
     return (
       <div className="h-full flex flex-col bg-white dark:bg-black">
@@ -48,16 +54,17 @@ export default function Crypto({ onNavigate, showToast }) {
             <p className="text-sm text-gray-500">${price.toLocaleString()}</p>
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('crypto.amount')}</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('crypto.amount')} (USD)</label>
             <input type="number" value={buyAmount} onChange={e => setBuyAmount(e.target.value)} placeholder="0.00"
               className="w-full mt-1 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-lg font-bold text-lumen-black dark:text-white border-0 outline-none" />
+            <p className="text-xs text-gray-500 mt-2 text-right">Balance: ${fiatBalance.toLocaleString()}</p>
           </div>
           <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 flex justify-between">
             <span className="text-sm text-gray-500">{t('crypto.youGet')}</span>
             <span className="text-sm font-bold text-lumen-black dark:text-white">{youGet} {asset.symbol}</span>
           </div>
           <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => { showToast(`Bought ${youGet} ${asset.symbol}`); setView('list'); setBuyAmount(''); }}
+            onClick={handleBuy}
             disabled={amt <= 0}
             className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold disabled:opacity-30">
             {t('crypto.confirm')}
@@ -119,15 +126,33 @@ export default function Crypto({ onNavigate, showToast }) {
           </div>
 
           <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => { showToast(`Swapped ${swapAmount} ${fromAsset.symbol} → ${youGet} ${toAsset.symbol}`); setView('list'); setSwapAmount(''); }}
+            onClick={() => {
+              const ok = swapCrypto(fromAsset.symbol, toAsset.symbol, amt);
+              if (!ok) { showToast('Insufficient holdings'); return; }
+              showToast(`Swapped ${swapAmount} ${fromAsset.symbol} → ${youGet} ${toAsset.symbol}`);
+              setView('list'); setSwapAmount('');
+            }}
             disabled={amt <= 0}
             className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold disabled:opacity-30">
-            {t('crypto.confirm')}
+           {t('crypto.confirm')}
           </motion.button>
         </div>
       </div>
     );
   }
+
+  // Simulate price ticks
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setPrices(prev => prev.map((p) => {
+        const change = (Math.random() - 0.5) * p * 0.002;
+        return Math.max(0.01, +(p + change).toFixed(2));
+      }));
+    }, 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const totalValue = cryptoAssets.reduce((sum, a, i) => sum + a.holdings * prices[i], 0);
 
   return (
     <div className="h-full overflow-y-auto scrollbar-hide pb-28">
@@ -135,14 +160,44 @@ export default function Crypto({ onNavigate, showToast }) {
         <h2 className="text-lg font-bold text-lumen-black dark:text-white text-center">{t('crypto.title')}</h2>
       </div>
 
-      <div className="px-5 pt-5 pb-4">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('crypto.portfolio')}</p>
-        <h1 className="text-3xl font-bold text-lumen-black dark:text-white mt-1">${totalValue.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h1>
+      <div className="px-5 mt-5 mb-5">
+        <div className="bg-[#111] dark:bg-[#1C1C1E] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex justify-between items-start mb-6 relative z-10">
+            <div>
+              <p className="text-[10px] text-white/50 uppercase tracking-[0.2em] font-bold mb-1">{t('crypto.portfolio')}</p>
+              <h2 className="text-3xl font-bold tracking-tight">${totalValue.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            </div>
+          </div>
+          {/* Monochrome Chart */}
+          <div className="h-16 w-full flex items-end gap-1.5 opacity-90 relative z-10">
+            {[20, 35, 25, 50, 40, 70, 55, 85, 65, 100].map((h, i) => (
+              <div key={i} className="flex-1 bg-white/10 rounded-t-sm relative group transition-all hover:bg-white/30" style={{ height: `${h}%` }}>
+                <div className="absolute top-0 left-0 w-full bg-white rounded-t-sm" style={{ height: '3px' }} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="px-5 mb-5 grid grid-cols-3 gap-3">
         {[{ label: t('crypto.buy'), action: () => { setBuyAsset(0); setView('buy'); } },
-          { label: t('crypto.sell'), action: () => showToast(t('crypto.sell_coming_soon')) },
+          { label: t('crypto.sell') || 'Sell', action: () => {
+            const sym = window.prompt('Which asset to sell? (BTC/ETH/SOL/USDT)');
+            if (!sym) return;
+            const key = sym.toUpperCase();
+            const idx = cryptoAssets.findIndex(a => a.symbol === key);
+            if (idx === -1) { showToast('Unknown asset'); return; }
+            const qty = window.prompt(`How many ${key} to sell?`, '0.01');
+            const q = parseFloat(qty);
+            if (!q || q <= 0) return;
+            const proceeds = q * prices[idx];
+            const lk = key.toLowerCase();
+            if ((user[lk] || 0) < q) { showToast('Insufficient holdings'); return; }
+            updateUser({ balance: (user.balance || 0) + proceeds, [lk]: (user[lk] || 0) - q });
+            addTransaction({ type: 'incoming', title: `Sell ${key}`, description: `Sold ${q} ${key}`, amount: proceeds, status: 'completed', category: 'crypto' });
+            showToast(`Sold ${q} ${key} for $${proceeds.toFixed(2)}`);
+          }},
           { label: t('crypto.swap'), action: () => setView('swap') }
         ].map((a, i) => (
           <motion.button key={i} whileTap={{ scale: 0.95 }} onClick={a.action}
