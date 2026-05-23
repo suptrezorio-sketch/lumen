@@ -8,6 +8,7 @@ const DIRECTOR_TABS = [
   { id: 'scenarios', path: '/director/scenarios', icon: Icons.Play, label: 'Scenarios' },
   { id: 'builder', path: '/director/builder', icon: Icons.Script, label: 'Builder' },
   { id: 'audio', path: '/director/audio', icon: Icons.Bell, label: 'Audio' },
+  { id: 'notifications', path: '/director/notifications', icon: Icons.Mail, label: 'Notifications' },
   { id: 'monitoring', path: '/director/monitoring', icon: Icons.TrendingUp, label: 'Live' },
   { id: 'settings', path: '/director/settings', icon: Icons.Settings, label: 'Settings' },
 ];
