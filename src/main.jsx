@@ -2,8 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import AdminApp from './AdminApp'
+import DirectorApp from './DirectorApp'
 import './index.css'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 import { SocketProvider } from './context/SocketContext'
 
@@ -14,15 +15,27 @@ if ('serviceWorker' in navigator) {
 }
 
 const isAdmin = window.location.pathname.startsWith('/admin');
+const isDirector = window.location.pathname.startsWith('/director');
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AppProvider>
-        <SocketProvider>
-          {isAdmin ? <AdminApp /> : <App />}
-        </SocketProvider>
-      </AppProvider>
+      <Routes>
+        <Route path="/director/*" element={
+          <AppProvider>
+            <SocketProvider>
+              <DirectorApp />
+            </SocketProvider>
+          </AppProvider>
+        } />
+        <Route path="/*" element={
+          <AppProvider>
+            <SocketProvider>
+              {isAdmin ? <AdminApp /> : <App />}
+            </SocketProvider>
+          </AppProvider>
+        } />
+      </Routes>
     </BrowserRouter>
   </React.StrictMode>,
 )
