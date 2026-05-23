@@ -1,0 +1,307 @@
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Operation `users.find()` buffering timed out after 10000ms
+MongooseError: Operation `users.find()` buffering timed out after 10000ms
+    at Timeout.<anonymous> (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/mongoose/lib/drivers/node-mongodb-native/collection.js:187:23)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+User.find(...).sort is not a function
+TypeError: User.find(...).sort is not a function
+    at /Users/panfi.love/Downloads/lumen-bank/server/index.js:103:37
+    at Layer.handle [as handle_request] (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/route.js:149:13)
+    at adminAuth (/Users/panfi.love/Downloads/lumen-bank/server/index.js:92:5)
+    at Layer.handle [as handle_request] (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/panfi.love/Downloads/lumen-bank/server/node_modules/express/lib/router/index.js:346:12)
+

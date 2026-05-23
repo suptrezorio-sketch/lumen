@@ -1,0 +1,9 @@
+{
+	"appId": "com.lumen.bank.trainer",
+	"appName": "LUMEN Bank",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	},
+	"packageClassList": []
+}
