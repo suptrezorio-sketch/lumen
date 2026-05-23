@@ -7,11 +7,21 @@ services:
     startCommand: npm start
     healthCheckPath: /health
     envVars:
-      - key: MONGODB_URI
-        sync: false
+      - key: SUPABASE_URL
+        value: https://jryxgykfmgtaoywkdqql.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyeXhneWtmbWd0YW95d2tkcXFsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDgxMzA0NiwiZXhwIjoyMDkwMzg5MDQ2fQ._pISAJVqXDjeFLT8j4Gv9ZWIX5qkQf-7GaQOm7KG2MM
+      - key: ABLY_API_KEY
+        value: dtltw.CwotFA:DlvVBwpaytpUD0plGqFNPQUqbsgXBFm-lX_fBG5BoEo
+      - key: POLLINATIONS_API_KEY
+        value: 080a31652692f35c01f9df2a55189325
+      - key: SMART_GROW_API_KEY
+        value: sgl_6f6b779c4f9402bf575e8ede565cd21236734d8b5ee7a5efdbd3f9a2969ab055
+      - key: PORT
+        value: 5001
       - key: FRONTEND_URL
         sync: false
       - key: ADMIN_LOGIN
         value: admin
       - key: ADMIN_PASSWORD
-        generateValue: true
+        value: lumen2026
