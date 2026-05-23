@@ -6,6 +6,7 @@ import UserManagement from './screens/director/UserManagement';
 import UserControlPanel from './screens/director/UserControlPanel';
 import ScenarioBuilder from './screens/director/ScenarioBuilder';
 import AudioLibrary from './screens/director/AudioLibrary';
+import AdminMonitoringDashboard from './screens/director/AdminMonitoringDashboard';
 
 // Placeholder components for other tabs
 const Placeholder = ({ title }) => (
@@ -29,7 +30,7 @@ function DirectorContent() {
         <Route path="/scenarios" element={<Placeholder title="Scenarios Management" />} />
         <Route path="/builder" element={<ScenarioBuilder />} />
         <Route path="/audio" element={<AudioLibrary />} />
-        <Route path="/monitoring" element={<Placeholder title="Live Monitoring" />} />
+        <Route path="/monitoring" element={<AdminMonitoringDashboard />} />
         <Route path="/settings" element={<Placeholder title="Settings" />} />
         <Route path="*" element={<Navigate to="/director" replace />} />
       </Routes>
