@@ -6,6 +6,7 @@ import { Icons } from '../../assets/Icons';
 const DIRECTOR_TABS = [
   { id: 'users', path: '/director', icon: Icons.Users, label: 'Users' },
   { id: 'scenarios', path: '/director/scenarios', icon: Icons.Play, label: 'Scenarios' },
+  { id: 'builder', path: '/director/builder', icon: Icons.Script, label: 'Builder' },
   { id: 'audio', path: '/director/audio', icon: Icons.Bell, label: 'Audio' },
   { id: 'monitoring', path: '/director/monitoring', icon: Icons.TrendingUp, label: 'Live' },
   { id: 'settings', path: '/director/settings', icon: Icons.Settings, label: 'Settings' },

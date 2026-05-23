@@ -4,6 +4,8 @@ import DirectorLayout from './components/director/DirectorLayout';
 import DirectorNav from './components/director/DirectorNav';
 import UserManagement from './screens/director/UserManagement';
 import UserControlPanel from './screens/director/UserControlPanel';
+import ScenarioBuilder from './screens/director/ScenarioBuilder';
+import AudioLibrary from './screens/director/AudioLibrary';
 
 // Placeholder components for other tabs
 const Placeholder = ({ title }) => (
@@ -25,7 +27,8 @@ function DirectorContent() {
         <Route path="/" element={<UserManagement />} />
         <Route path="/user/:userId" element={<UserControlPanel />} />
         <Route path="/scenarios" element={<Placeholder title="Scenarios Management" />} />
-        <Route path="/audio" element={<Placeholder title="Audio Library" />} />
+        <Route path="/builder" element={<ScenarioBuilder />} />
+        <Route path="/audio" element={<AudioLibrary />} />
         <Route path="/monitoring" element={<Placeholder title="Live Monitoring" />} />
         <Route path="/settings" element={<Placeholder title="Settings" />} />
         <Route path="*" element={<Navigate to="/director" replace />} />
