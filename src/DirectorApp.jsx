@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import DirectorConsole from './screens/director/DirectorConsole';
 
 export default function DirectorApp() {
@@ -29,12 +29,10 @@ export default function DirectorApp() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/director" element={<DirectorConsole />} />
-        <Route path="/director/*" element={<DirectorConsole />} />
-        <Route path="*" element={<Navigate to="/director" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/director" element={<DirectorConsole />} />
+      <Route path="/director/*" element={<DirectorConsole />} />
+      <Route path="*" element={<Navigate to="/director" replace />} />
+    </Routes>
   );
 }
