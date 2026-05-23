@@ -1,5 +1,4 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
 import DirectorConsole from './screens/director/DirectorConsole';
 
 export default function DirectorApp() {
@@ -28,11 +27,5 @@ export default function DirectorApp() {
     );
   }
 
-  return (
-    <Routes>
-      <Route path="/director" element={<DirectorConsole />} />
-      <Route path="/director/*" element={<DirectorConsole />} />
-      <Route path="*" element={<Navigate to="/director" replace />} />
-    </Routes>
-  );
+  return <DirectorConsole />;
 }

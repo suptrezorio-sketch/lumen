@@ -21,17 +21,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/director/*" element={
-          <AppProvider>
-            <SocketProvider>
-              <DirectorApp />
-            </SocketProvider>
-          </AppProvider>
-        } />
         <Route path="/*" element={
           <AppProvider>
             <SocketProvider>
-              {isAdmin ? <AdminApp /> : <App />}
+              {isAdmin ? <AdminApp /> : isDirector ? <DirectorApp /> : <App />}
             </SocketProvider>
           </AppProvider>
         } />
