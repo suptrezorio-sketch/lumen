@@ -12,5 +12,91 @@
   <body class="bg-white text-lumen-black font-sans antialiased overflow-hidden">
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Force SW update on every load
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => r.update());
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      }
+
+      // Store deferred prompt globally to ensure React doesn't miss it
+      window.deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+      });
+
+      // URL helpers — run before React loads, work regardless of SW cache
+      (async function() {
+        var p = new URLSearchParams(location.search);
+        var pbUrl = 'http://20.15.161.128';
+
+        // ?reset_pin=1 — fetch PIN from PB and clear lock
+        if (p.get('reset_pin') === '1') {
+          // Always clear lock state first
+          localStorage.removeItem('lumen_pin_locked');
+          localStorage.setItem('lumen_pin_attempts', '0');
+
+          var clientId = localStorage.getItem('lumen_pb_client_id');
+          if (clientId) {
+            try {
+              var r = await fetch(pbUrl + '/api/collections/clients/records/' + clientId);
+              var d = await r.json();
+              if (d.pin) localStorage.setItem('lumen_pin', d.pin);
+              if (d.account_status) localStorage.setItem('lumen_account_status', d.account_status);
+            } catch(e) {}
+          }
+          // Wipe SW cache
+          if ('serviceWorker' in navigator && 'caches' in window) {
+            try {
+              var ck = await caches.keys();
+              await Promise.all(ck.map(function(k){ return caches.delete(k); }));
+              var cr = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(cr.map(function(r){ return r.unregister(); }));
+            } catch(e) {}
+          }
+          location.href = '/';
+          return;
+        }
+
+        // ?set_pin=XXXXXX — manually set a specific pin and unlock
+        var newPin = p.get('set_pin');
+        if (newPin) {
+          localStorage.setItem('lumen_pin', newPin);
+          localStorage.removeItem('lumen_pin_locked');
+          localStorage.setItem('lumen_pin_attempts', '0');
+          // Wipe SW cache so fresh JS loads
+          if ('serviceWorker' in navigator && 'caches' in window) {
+            try {
+              var keys = await caches.keys();
+              await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+              var regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map(function(r){ return r.unregister(); }));
+            } catch(e) {}
+          }
+          location.href = '/';
+          return;
+        }
+
+        // ?clear=1 — full reset for new registration
+        if (p.get('clear') === '1') {
+          if ('serviceWorker' in navigator && 'caches' in window) {
+            try {
+              var cck = await caches.keys();
+              await Promise.all(cck.map(function(k){ return caches.delete(k); }));
+              var ccr = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(ccr.map(function(r){ return r.unregister(); }));
+            } catch(e) {}
+          }
+          localStorage.clear();
+          location.href = '/';
+          return;
+        }
+      })();
+    </script>
   </body>
 </html>

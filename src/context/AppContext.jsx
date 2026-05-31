@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import useOrchestratorStore from '../store/orchestratorStore';
 import en from '../i18n/en.json';
 import fr from '../i18n/fr.json';
+import pb from '../lib/pb';
 
 const langs = { en, fr };
 const AppContext = createContext();
@@ -36,10 +37,18 @@ const TRANSACTIONS = [
 export function AppProvider({ children }) {
   const [lang, setLang] = useState(() => localStorage.getItem('lumen_lang') || 'en');
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('lumen_dark') === 'true');
-  const [cards, setCards] = useState(() => JSON.parse(localStorage.getItem('lumen_cards') || JSON.stringify(CARDS)));
-  const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('lumen_txs') || JSON.stringify(TRANSACTIONS)));
+  const [cards, setCards] = useState(() => JSON.parse(localStorage.getItem('lumen_cards') || '[]'));
+  const [transactions, setTransactions] = useState(() => JSON.parse(localStorage.getItem('lumen_txs') || '[]'));
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('lumen_user_data')) || DEFAULT_USER);
   const [userId, setUserId] = useState(localStorage.getItem('lumen_user_id'));
+  const [pbClientId, setPbClientId] = useState(() => localStorage.getItem('lumen_pb_client_id'));
+  const [accountStatus, setAccountStatus] = useState(() => {
+    const stored = localStorage.getItem('lumen_account_status');
+    if (stored) return stored;
+    // Existing users without PB registration get approved by default
+    const hasPbId = !!localStorage.getItem('lumen_pb_client_id');
+    return hasPbId ? 'pending' : 'approved';
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(() => localStorage.getItem('lumen_onboarded') === 'true');
   const [pinAttempts, setPinAttempts] = useState(0);
@@ -52,11 +61,16 @@ export function AppProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [sessionToken, setSessionToken] = useState(null);
   const [lastActivity, setLastActivity] = useState(Date.now());
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(window.deferredPrompt || null);
 
   useEffect(() => {
+    // If it was captured before React loaded
+    if (window.deferredPrompt) {
+      setDeferredPrompt(window.deferredPrompt);
+    }
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
+      window.deferredPrompt = e;
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -125,41 +139,251 @@ export function AppProvider({ children }) {
   useEffect(() => { localStorage.setItem('lumen_txs', JSON.stringify(transactions)); }, [transactions]);
 
   const login = async (pin) => {
+    const clientId = localStorage.getItem('lumen_pb_client_id');
     const storedPin = localStorage.getItem('lumen_pin');
-    if (pin === storedPin) { 
-      setIsAuthenticated(true); 
-      setPinAttempts(0); 
-      setSessionToken('LM-' + Math.random().toString(36).substring(2, 15));
-      setLastActivity(Date.now());
-      return true; 
+    if (pin !== storedPin) {
+      const next = pinAttempts + 1;
+      setPinAttempts(next);
+      if (next >= 3) setPinLocked(true);
+      return false;
     }
-    const next = pinAttempts + 1;
-    setPinAttempts(next);
-    if (next >= 3) setPinLocked(true);
-    return false;
+    // Re-fetch account status from PocketBase on every login (public GET, no auth)
+    if (clientId && !clientId.startsWith('USER_')) {
+      try {
+        const res = await fetch(`${pb.baseUrl}/api/collections/clients/records/${clientId}`);
+        if (res.ok) {
+          const client = await res.json();
+          const status = client.account_status || 'pending';
+          setAccountStatus(status);
+          localStorage.setItem('lumen_account_status', status);
+          const fullName = `${client.first_name} ${client.last_name}`.trim();
+          const updatedUser = { ...user, name: fullName, email: client.email, phone: client.phone, pbId: clientId };
+          setUser(updatedUser);
+          localStorage.setItem('lumen_user_data', JSON.stringify(updatedUser));
+        }
+      } catch {}
+    }
+    setIsAuthenticated(true);
+    setPinAttempts(0);
+    setSessionToken('LM-' + Math.random().toString(36).substring(2, 15));
+    setLastActivity(Date.now());
+    return true;
   };
 
-  const logout = () => { 
-    setIsAuthenticated(false); 
+  const loadClientData = useCallback(async () => {
+    const clientId = localStorage.getItem('lumen_pb_client_id');
+    const pass = localStorage.getItem('lumen_pb_pass');
+    if (!clientId || clientId.startsWith('USER_') || !pass) return;
+
+    try {
+      if (!pb.authStore.isValid) {
+        const clientRec = await pb.collection('clients').getOne(clientId);
+        await pb.collection('clients').authWithPassword(clientRec.email, pass);
+      }
+
+      const [accs, pbCards, pbOps] = await Promise.all([
+        pb.collection('ledger_accounts').getList(1, 20, { filter: `client = '${clientId}'` }),
+        pb.collection('cards').getList(1, 20, { filter: `client = '${clientId}'` }),
+        pb.collection('operations').getList(1, 50, { filter: `client = '${clientId}'`, sort: '-created' })
+      ]);
+
+      const fiatAcc = accs.items.find(a => a.type === 'fiat');
+      const btcAcc = accs.items.find(a => a.currency === 'BTC' || a.asset === 'BTC');
+      const ethAcc = accs.items.find(a => a.currency === 'ETH' || a.asset === 'ETH');
+      const usdtAcc = accs.items.find(a => a.currency === 'USDT' || a.asset === 'USDT');
+
+      setUser(prev => {
+        const next = { ...prev };
+        if (fiatAcc) next.balance = fiatAcc.available_balance || 0;
+        if (btcAcc) next.btc = btcAcc.available_balance || 0;
+        if (ethAcc) next.eth = ethAcc.available_balance || 0;
+        if (usdtAcc) next.usdt = usdtAcc.available_balance || 0;
+        localStorage.setItem('lumen_user_data', JSON.stringify(next));
+        return next;
+      });
+
+      if (pbCards.items.length > 0) {
+        setCards(pbCards.items.map(c => ({
+          id: c.id,
+          type: c.type,
+          name: c.label || c.type,
+          number: `•••• •••• •••• ${c.number_last4 || '0000'}`,
+          balance: (fiatAcc && c.type === 'fiat') ? (fiatAcc.available_balance || 0) : 0,
+          currency: c.currency,
+          expiry: c.expiry,
+          holder: c.holder,
+          cvv: '***',
+          blocked: c.status !== 'active',
+          dailyLimit: 5000,
+          monthlyLimit: 25000
+        })));
+      }
+
+      if (pbOps.items.length > 0) {
+        setTransactions(pbOps.items.map(o => {
+          const isOutgoing = ['WITHDRAW','CARD_TRANSFER','IBAN_TRANSFER','CRYPTO_BUY'].includes(o.type);
+          return {
+            id: o.id,
+            type: isOutgoing ? 'outgoing' : 'incoming',
+            title: o.type.replace(/_/g, ' '),
+            description: o.status,
+            amount: isOutgoing ? -Math.abs(o.amount) : Math.abs(o.amount),
+            date: o.created,
+            category: 'general',
+            fee: 0,
+            status: o.status.toLowerCase()
+          };
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to load client data from PB', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadClientData();
+    }
+  }, [isAuthenticated, loadClientData]);
+
+  const resetPinLock = () => {
+    setPinLocked(false);
+    setPinAttempts(0);
+  };
+
+  const changePin = async (newPin) => {
+    const clientId = localStorage.getItem('lumen_pb_client_id');
+    if (!clientId) {
+      localStorage.setItem('lumen_pin', newPin);
+      return;
+    }
+    await pb.collection('clients').update(clientId, { pin: newPin });
+    localStorage.setItem('lumen_pin', newPin);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
     setSessionToken(null);
     localStorage.removeItem('lumen_user_id');
     setUserId(null);
+    pb.authStore.clear();
   };
 
   const completeOnboarding = async (pin, langChoice, regForm) => {
+    if (langChoice) setLang(langChoice);
     localStorage.setItem('lumen_pin', pin);
     localStorage.setItem('lumen_onboarded', 'true');
-    localStorage.setItem('lumen_bio', 'true');
-    if (langChoice) setLang(langChoice);
-    const newUserId = 'USER_' + Date.now();
-    localStorage.setItem('lumen_user_id', newUserId);
-    setUserId(newUserId);
-    const userData = { ...DEFAULT_USER, ...regForm, id: newUserId };
-    localStorage.setItem('lumen_user_data', JSON.stringify(userData));
-    setUser(userData);
+
+    const nameParts = (regForm.name || '').trim().split(' ');
+    const firstName = nameParts[0] || 'Client';
+    const lastName = nameParts.slice(1).join(' ') || '.';
+    const email = regForm.email || `client_${Date.now()}@lumen.app`;
+    const tempPassword = pin + '_Lm' + Date.now();
+    const pbUrl = pb.baseUrl;
+
+    const saveLocal = (id, status = 'pending') => {
+      localStorage.setItem('lumen_pb_client_id', id);
+      localStorage.setItem('lumen_pb_pass', tempPassword);
+      localStorage.setItem('lumen_account_status', status);
+      localStorage.setItem('lumen_user_id', id);
+      setPbClientId(id);
+      setAccountStatus(status);
+      setUserId(id);
+      const userData = { ...DEFAULT_USER, name: `${firstName} ${lastName}`, email, phone: regForm.phone || '', id, pbId: id };
+      localStorage.setItem('lumen_user_data', JSON.stringify(userData));
+      setUser(userData);
+    };
+
+    try {
+      // Step 1: Get admin token
+      const adminRes = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: 'admin@lumen.bank', password: 'Lumen2026Admin' }),
+      });
+      const adminData = await adminRes.json();
+      const adminToken = adminData.token;
+      if (!adminToken) throw new Error('Admin auth failed');
+
+      // Step 2: Create client record via admin API
+      const clientRes = await fetch(`${pbUrl}/api/collections/clients/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+        body: JSON.stringify({
+          email,
+          password: tempPassword,
+          passwordConfirm: tempPassword,
+          emailVisibility: true,
+          first_name: firstName,
+          last_name: lastName,
+          phone: regForm.phone || '',
+          country: regForm.country || 'CA',
+          language: langChoice || 'en',
+          account_status: 'pending',
+          kyc_status: 'none',
+          aml_status: 'none',
+          risk_level: 'low',
+          pin,
+        }),
+      });
+      const clientRecord = await clientRes.json();
+      if (!clientRecord.id) throw new Error(clientRecord.message || 'Client creation failed');
+
+      // Step 3: Create client_application via admin API (this is what shows up in CRM)
+      await fetch(`${pbUrl}/api/collections/client_applications/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminToken },
+        body: JSON.stringify({ client: clientRecord.id, status: 'submitted' }),
+      });
+
+      saveLocal(clientRecord.id, 'pending');
+    } catch (err) {
+      console.error('Registration error:', err);
+      // Fallback: try direct PB SDK (works if createRule is open)
+      try {
+        const clientRecord = await pb.collection('clients').create({
+          email, password: tempPassword, passwordConfirm: tempPassword,
+          emailVisibility: true,
+          first_name: firstName, last_name: lastName,
+          phone: regForm.phone || '', country: regForm.country || 'CA',
+          language: langChoice || 'en', account_status: 'pending',
+          kyc_status: 'none', aml_status: 'none', risk_level: 'low', pin,
+        });
+        try {
+          await pb.collection('client_applications').create({ client: clientRecord.id, status: 'submitted' });
+        } catch {}
+        saveLocal(clientRecord.id, 'pending');
+      } catch (fallbackErr) {
+        console.error('Fallback registration also failed:', fallbackErr);
+        // Last resort: save locally only (no CRM visibility)
+        const localId = 'USER_' + Date.now();
+        localStorage.setItem('lumen_user_id', localId);
+        setUserId(localId);
+        const userData = { name: `${firstName} ${lastName}`, email, phone: regForm.phone || '', id: localId };
+        localStorage.setItem('lumen_user_data', JSON.stringify(userData));
+        setUser(userData);
+        localStorage.setItem('lumen_account_status', 'pending');
+        setAccountStatus('pending');
+      }
+    }
+
     setOnboardingDone(true);
     setIsAuthenticated(false);
   };
+
+  // Poll account status while pending — public GET, no auth needed (viewRule = '')
+  const refreshAccountStatus = useCallback(async () => {
+    const clientId = localStorage.getItem('lumen_pb_client_id');
+    if (!clientId || clientId.startsWith('USER_')) return;
+    try {
+      const res = await fetch(`${pb.baseUrl}/api/collections/clients/records/${clientId}`);
+      if (!res.ok) return;
+      const client = await res.json();
+      const status = client.account_status || 'pending';
+      setAccountStatus(status);
+      localStorage.setItem('lumen_account_status', status);
+    } catch {}
+  }, []);
 
   const addTransaction = async (tx) => {
     const newTx = { ...tx, id: 'TX-' + Date.now(), date: new Date().toISOString() };
@@ -218,13 +442,14 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       t, lang, setLang, darkMode, setDarkMode,
       user, setUser, isAuthenticated, onboardingDone,
-      pinLocked, pinAttempts, login, logout, completeOnboarding, bypassOnboarding,
+      pinLocked, pinAttempts, login, logout, changePin, resetPinLock, completeOnboarding, bypassOnboarding,
       cards, updateCard, transactions, addTransaction,
       kycStatus, setKycStatus, amlStatus, setAmlStatus,
       creditStatus, setCreditStatus,
       biometric, setBiometric, registerBiometric, twoFactor, setTwoFactor,
       notifications, setNotifications, installApp, deferredPrompt,
       cryptoAssets: CRYPTO_ASSETS,
+      pbClientId, accountStatus, setAccountStatus, refreshAccountStatus, loadClientData
     }}>
       {children}
     </AppContext.Provider>

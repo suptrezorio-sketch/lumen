@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import { usePbClient } from '../hooks/usePbClient';
 
 function OTPModal({ onVerify, onClose, t }) {
   const [code, setCode] = useState('');
@@ -68,6 +69,7 @@ function OTPModal({ onVerify, onClose, t }) {
 
 export default function Utilities({ onNavigate, showToast }) {
   const { t, addTransaction } = useApp();
+  const { submitOperation } = usePbClient();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
@@ -87,24 +89,26 @@ export default function Utilities({ onNavigate, showToast }) {
     setShowOtp(true);
   };
 
-  const verifyOtp = () => {
+  const verifyOtp = async () => {
     setShowOtp(false);
     setIsDone(true);
     showToast(t('common.success'));
-    
     addTransaction({
       type: 'outgoing',
       title: t('history.' + selectedCategory),
       description: phone,
       amount: -parseFloat(amount),
       category: selectedCategory,
-      status: 'completed'
+      status: 'pending'
     });
-
-    // IMMEDIATELY navigate home after delay
-    setTimeout(() => {
-      onNavigate('/');
-    }, 1500);
+    try {
+      await submitOperation('UTILITY_PAYMENT', {
+        amount: parseFloat(amount),
+        currency: 'CAD',
+        details: { category: selectedCategory, recipient: phone },
+      });
+    } catch {}
+    setTimeout(() => onNavigate('/'), 1500);
   };
 
   return (

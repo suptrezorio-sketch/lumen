@@ -10,6 +10,25 @@
     "confirmPinDesc": "Please enter your PIN again",
     "pinMismatch": "PINs do not match. Please try again."
   },
+  "permissions": {
+    "title": "App Permissions",
+    "description": "To provide the best banking experience, LUMEN needs access to the following:",
+    "notifications": "Push Notifications",
+    "camera": "Camera for document verification",
+    "biometric": "Face ID / Touch ID",
+    "grantAccess": "Continue"
+  },
+  "install": {
+    "title": "Install LUMEN",
+    "description": "To use your bank account, add LUMEN to your Home Screen.",
+    "step1": "Tap the Share button",
+    "step2": "Select \"Add to Home Screen\"",
+    "step3": "Tap \"Add\""
+  },
+  "language": {
+    "english": "English",
+    "french": "French"
+  },
   "common": {
     "next": "Next",
     "confirm": "Confirm",
@@ -17,7 +36,11 @@
     "error": "Error",
     "loading": "Loading...",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "share": "Share Receipt",
+    "done": "Done",
+    "login": "Sign In",
+    "alreadyHaveAccount": "Already have an account? Sign In"
   },
   "nav": {
     "home": "Home",
@@ -135,7 +158,8 @@
     "recipientPlaceholder": "Enter recipient name or phone",
     "amountPlaceholder": "Enter amount",
     "notePlaceholder": "Add a note (optional)",
-    "slideToSend": "Slide to send"
+    "slideToSend": "Slide to send",
+    "successDesc": "Your transfer has been submitted and is pending review."
   },
   "history": {
     "title": "History",
@@ -190,7 +214,39 @@
     "sell": "Sell",
     "price": "Price",
     "change": "24h Change",
-    "sell_coming_soon": "Selling will be available after KYC verification"
+    "sell_coming_soon": "Selling will be available after KYC verification",
+    "wallet": "Wallet",
+    "receive": "Receive",
+    "send_crypto": "Send",
+    "network": "Network",
+    "destination": "Destination Address",
+    "memo": "Memo / Tag (optional)",
+    "confirm_send": "Confirm Send",
+    "sending": "Sending...",
+    "sending_pending": "Your crypto transfer is pending review",
+    "buy_crypto": "Buy Crypto",
+    "buy_confirm": "Confirm Purchase",
+    "selling_crypto": "Sell Crypto",
+    "sell_confirm": "Confirm Sale",
+    "swap_crypto": "Swap Crypto",
+    "swap_from": "Swap From",
+    "swap_to": "Swap To",
+    "you_receive": "You'll Receive",
+    "swap_rate": "Exchange Rate",
+    "wallet_risk_training": "Wallet Risk Training",
+    "wallet_risk_training_desc": "Verify your wallet recovery phrase to activate crypto features",
+    "verification": "Verification",
+    "kyc": "Identity Verification",
+    "aml": "AML Form",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "blocked": "Blocked",
+    "preferences": "Preferences",
+    "language": "Language",
+    "darkMode": "Dark Mode",
+    "installApp": "Install App",
+    "signOut": "Sign Out"
   },
   "register": {
     "title": "Profile Registration",
@@ -235,7 +291,225 @@
       "credits": "Credits",
       "docs": "KYC/AML",
       "chat": "Push/Chat",
-      "controls": "Controls"
+      "controls": "Controls",
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "pending": "Pending Ops",
+      "kyc": "KYC Review",
+      "cards": "Cards",
+      "crypto": "Crypto Wallets",
+      "contracts": "Smart Contracts",
+      "ledger": "Ledger",
+      "audit": "Audit Log",
+      "scenarios": "Scenario Templates",
+      "notifications": "Notifications",
+      "settings": "Settings"
+    },
+    "clients": {
+      "title": "Clients",
+      "search": "Search clients...",
+      "filters": {
+        "all": "All",
+        "pendingApproval": "Pending Approval",
+        "approved": "Approved",
+        "blocked": "Blocked",
+        "kycRequired": "KYC Required",
+        "amlPending": "AML Pending",
+        "pendingOps": "Has Pending Ops",
+        "frozenCards": "Frozen Cards",
+        "activeContract": "Active Contract"
+      },
+      "status": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "accountStatus": "Account",
+        "appStatus": "Application",
+        "kycStatus": "KYC",
+        "amlStatus": "AML",
+        "riskLevel": "Risk",
+        "balance": "Balance",
+        "pendingOps": "Pending Ops",
+        "lastActivity": "Last Activity",
+        "scenario": "Scenario"
+      }
+    },
+    "dashboard": {
+      "totalClients": "Total Clients",
+      "pendingApproval": "Pending Approval",
+      "pendingOps": "Pending Operations",
+      "kycSubmitted": "KYC Submitted",
+      "recentClients": "Recent Clients",
+      "recentOps": "Recent Operations",
+      "viewAll": "View all"
+    },
+    "pendingOps": {
+      "title": "Pending Operations",
+      "filters": {
+        "all": "All",
+        "pending": "Pending",
+        "underReview": "Under Review",
+        "submitted": "Submitted",
+        "processing": "Processing"
+      },
+      "total": "operations",
+      "noOps": "No pending operations",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "kycReview": {
+      "title": "KYC / AML Review",
+      "noRequests": "No KYC requests"
+    },
+    "clientCard": {
+      "tabs": {
+        "overview": "Overview",
+        "accounts": "Accounts",
+        "cards": "Cards",
+        "operations": "Operations",
+        "crypto": "Crypto",
+        "smartContracts": "Smart Contracts",
+        "kycAml": "KYC / AML",
+        "documents": "Documents",
+        "notifications": "Notifications",
+        "chat": "Chat",
+        "bankCall": "Bank Call",
+        "scenario": "Scenario",
+        "audit": "Audit"
+      },
+      "quickActions": {
+        "approveAccess": "Approve Access",
+        "rejectAccess": "Reject Access",
+        "assignScenario": "Assign Scenario",
+        "sendPush": "Send Push",
+        "createOperation": "Create Operation",
+        "createCard": "Create Card",
+        "freezeCard": "Freeze Card",
+        "requestKyc": "Request KYC/AML",
+        "createContract": "Create Smart Contract",
+        "openChat": "Open Chat"
+      },
+      "overview": {
+        "status": "Status",
+        "riskLevel": "Risk Level",
+        "applicationStatus": "Application",
+        "totalBalance": "Total Balance",
+        "scenario": "Scenario",
+        "created": "Created",
+        "lastLogin": "Last Login"
+      },
+      "accounts": {
+        "type": "Type",
+        "currency": "Currency",
+        "available": "Available",
+        "pending": "Pending",
+        "frozen": "Frozen",
+        "accountNumber": "Account Number",
+        "iban": "IBAN",
+        "swift": "SWIFT/BIC"
+      },
+      "cards": {
+        "addCard": "Add Card",
+        "freeze": "Freeze",
+        "unfreeze": "Unfreeze",
+        "block": "Block",
+        "reissue": "Reissue",
+        "type": "Type",
+        "number": "Number",
+        "expiry": "Expiry",
+        "status": "Status",
+        "limits": "Limits",
+        "onlinePayments": "Online Payments",
+        "contactless": "Contactless",
+        "atmWithdrawals": "ATM Withdrawals",
+        "intlPayments": "International",
+        "cryptoPayments": "Crypto Payments"
+      },
+      "crypto": {
+        "asset": "Asset",
+        "address": "Address",
+        "network": "Network",
+        "balance": "Balance",
+        "status": "Status",
+        "memoTag": "Memo / Tag",
+        "activate": "Activate",
+        "freeze": "Freeze"
+      },
+      "smartContracts": {
+        "contractId": "Contract ID",
+        "issuer": "Issuer",
+        "beneficiary": "Beneficiary",
+        "asset": "Asset",
+        "amount": "Amount",
+        "fiatEquivalent": "Fiat Equivalent",
+        "status": "Status",
+        "dueDate": "Due Date",
+        "progress": "Progress",
+        "create": "Create Contract",
+        "noContracts": "No smart contracts"
+      },
+      "kycAml": {
+        "type": "Type",
+        "status": "Status",
+        "deadline": "Deadline",
+        "submitted": "Submitted",
+        "reviewed": "Reviewed",
+        "approve": "Approve",
+        "reject": "Reject",
+        "moreInfo": "Request More Info",
+        "noRequests": "No KYC/AML requests"
+      },
+      "documents": {
+        "type": "Document Type",
+        "file": "Document",
+        "status": "Status",
+        "submitted": "Submitted",
+        "verified": "Verified",
+        "rejected": "Rejected",
+        "noDocuments": "No documents uploaded"
+      },
+      "operations": {
+        "type": "Type",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date",
+        "approve": "Approve",
+        "reject": "Reject",
+        "noOperations": "No operations"
+      },
+      "audit": {
+        "admin": "Admin",
+        "action": "Action",
+        "entity": "Entity",
+        "oldValue": "Old Value",
+        "newValue": "New Value",
+        "comment": "Comment",
+        "ipAddress": "IP Address",
+        "noEntries": "No audit entries"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "pushTitle": "Push Title",
+        "pushBody": "Push Body",
+        "send": "Send Push",
+        "noNotifications": "No notifications"
+      },
+      "scenario": {
+        "title": "Scenario",
+        "current": "Current Scenario",
+        "available": "Available Scenarios",
+        "assign": "Assign",
+        "noScenarios": "No scenarios assigned"
+      },
+      "bankCall": {
+        "title": "Bank Call",
+        "noCalls": "No bank calls recorded"
+      },
+      "chat": {
+        "title": "Chat",
+        "send": "Send",
+        "placeholder": "Type a message..."
+      }
     },
     "user": {
       "balance": "Balance",

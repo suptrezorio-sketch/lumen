@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LUMEN Bank - Official Certificates</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --doc-bg: #F9F7F2;
+    --navy: #1A2B4C;
+    --gold: #B89B56;
+    --text: #1a1a1a;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    background: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .certificate {
+    width: 210mm;
+    height: 297mm;
+    background-color: var(--doc-bg);
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.01) 0px, rgba(0,0,0,0.01) 1px, transparent 1px, transparent 10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
+    box-sizing: border-box;
+    padding: 15mm;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  .watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-family: 'Playfair Display', serif;
+    font-size: 150px;
+    font-weight: 700;
+    color: var(--navy);
+    opacity: 0.03;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 1;
+  }
+
+  .border-outer {
+    position: absolute;
+    top: 15mm; left: 15mm; right: 15mm; bottom: 15mm;
+    border: 2px solid var(--navy);
+    z-index: 2;
+  }
+  
+  .border-inner {
+    position: absolute;
+    top: 17mm; left: 17mm; right: 17mm; bottom: 17mm;
+    border: 1px solid var(--gold);
+    z-index: 2;
+  }
+
+  .corner {
+    position: absolute;
+    width: 10px; height: 10px;
+    border: 1px solid var(--gold);
+    background: var(--navy);
+    z-index: 3;
+  }
+  .corner.tl { top: 16.5mm; left: 16.5mm; }
+  .corner.tr { top: 16.5mm; right: 16.5mm; }
+  .corner.bl { bottom: 16.5mm; left: 16.5mm; }
+  .corner.br { bottom: 16.5mm; right: 16.5mm; }
+
+  .content {
+    position: relative;
+    z-index: 10;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20mm 15mm;
+    box-sizing: border-box;
+  }
+
+  .header-crests {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .crest {
+    width: 60px;
+    height: 60px;
+    border: 1.5px solid var(--navy);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--navy);
+    text-align: center;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 20px 0 40px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    color: var(--navy);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0 0 10px;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--text);
+    text-align: center;
+    font-weight: 600;
+    margin: 0 0 40px;
+    font-style: italic;
+  }
+
+  .details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px 30px;
+    margin-bottom: 30px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  
+  .details strong {
+    color: var(--navy);
+  }
+
+  .body-text {
+    font-size: 13px;
+    line-height: 1.8;
+    text-align: justify;
+    margin-bottom: 30px;
+  }
+
+  .list-section {
+    margin-bottom: 30px;
+    font-size: 13px;
+  }
+  .list-section h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--navy);
+    font-size: 15px;
+    margin: 0 0 10px;
+  }
+  .list-section ul {
+    margin: 0; padding-left: 20px;
+    line-height: 1.8;
+  }
+
+  .footer-signatures {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    position: relative;
+  }
+
+  .signature {
+    text-align: center;
+    width: 200px;
+  }
+  .sign-line {
+    border-bottom: 1px solid var(--text);
+    height: 40px;
+    margin-bottom: 5px;
+    position: relative;
+  }
+  .sign-img {
+    position: absolute;
+    bottom: 2px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Playfair Display', cursive;
+    font-size: 24px;
+    color: #1a1a1a;
+    opacity: 0.8;
+    white-space: nowrap;
+    font-style: italic;
+  }
+  .signature p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--navy);
+    font-weight: 600;
+  }
+  .signature span {
+    font-size: 10px;
+    color: #666;
+  }
+
+  .official-stamp {
+    position: absolute;
+    left: 50%;
+    bottom: -20px;
+    transform: translateX(-50%) rotate(-15deg);
+    width: 100px;
+    height: 100px;
+    border: 3px double #2B4C7E;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2B4C7E;
+    font-family: 'Playfair Display', serif;
+    font-size: 10px;
+    text-align: center;
+    font-weight: bold;
+    mix-blend-mode: multiply;
+    opacity: 0.7;
+  }
+  .official-stamp::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 5px; right: 5px; bottom: 5px;
+    border: 1px dashed #2B4C7E;
+    border-radius: 50%;
+  }
+
+  .bottom-meta {
+    position: absolute;
+    bottom: 20mm;
+    left: 20mm;
+    right: 20mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #888;
+    z-index: 10;
+  }
+
+  .qr-code {
+    width: 40px; height: 40px;
+    background: #fff;
+    border: 1px solid #ccc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 6px; text-align: center; padding: 2px;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  @media print {
+    body { background: none; padding: 0; gap: 0; }
+    .certificate { box-shadow: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- CERTIFICATE 1: BANKING LICENSE -->
+  <div class="certificate">
+    <div class="watermark">ORIGINAL</div>
+    <div class="border-outer"></div>
+    <div class="border-inner"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="content">
+      <div class="header-crests">
+        <div class="crest" style="border-color: var(--gold); color: var(--gold);">CBC<br><span style="font-size: 8px; font-family: 'Inter', sans-serif;">CYPRUS</span></div>
+        <div class="crest">LUMEN<br><span style="font-size: 8px; font-family: 'Inter', sans-serif;">BANK</span></div>
+      </div>
+      <div class="divider"></div>
+
+      <h1>Certificate of Banking License</h1>
+      <h2>Issued pursuant to Section 11 of the Banking Law of 1997 (66(I)/1997)</h2>
+
+      <div class="details">
+        <div><strong>Institution Name:</strong> LUMEN Bank Ltd.</div>
+        <div><strong>License Number:</strong> CBC/BK/2023/0147</div>
+        <div><strong>Registration Number:</strong> HE 456789</div>
+        <div><strong>Date of Issuance:</strong> 15 October 2023</div>
+        <div><strong>Issuing Authority:</strong> Central Bank of Cyprus (CBC)</div>
+        <div><strong>Valid Until:</strong> Indefinite (subject to compliance)</div>
+      </div>
+
+      <div class="body-text">
+        This is to certify that <strong>LUMEN Bank Ltd.</strong>, a company incorporated under the laws of the Republic of Cyprus, is authorized to carry on the business of banking in Cyprus and internationally under The Banking Law of 1997. The institution is subject to ongoing regulatory oversight and must maintain compliance with all applicable financial regulations, capital requirements, and anti-money laundering directives.
+      </div>
+
+      <div class="list-section">
+        <h3>Permitted Activities:</h3>
+        <ul>
+          <li>Acceptance of deposits and other repayable funds</li>
+          <li>Granting of credits and lending operations</li>
+          <li>Payment services and electronic money issuance</li>
+          <li>Foreign exchange services and currency trading</li>
+          <li>Digital banking, crypto-asset services (CASP), and wealth management</li>
+        </ul>
+      </div>
+
+      <div class="list-section">
+        <h3>Supervisory Authorities:</h3>
+        <ul>
+          <li><strong>Primary:</strong> Central Bank of Cyprus (CBC)</li>
+          <li><strong>Secondary:</strong> Office of the Superintendent of Financial Institutions (OSFI), Canada (as Schedule II Foreign Bank Subsidiary)</li>
+        </ul>
+      </div>
+
+      <div class="list-section">
+        <h3>Registered Head Office:</h3>
+        <p style="margin-top:5px;">28 October Avenue, 1st Floor, Office 101, 2414 Engomi, Nicosia, Cyprus</p>
+      </div>
+
+      <div class="footer-signatures">
+        <div class="signature">
+          <div class="sign-line"><span class="sign-img" style="color: #2B4C7E;">A. Kyriacou</span></div>
+          <p>Dr. Andreas Kyriacou</p>
+          <span>Governor of the Central Bank of Cyprus</span>
+        </div>
+
+        <div class="official-stamp">
+          CENTRAL BANK<br>OF CYPRUS<br>★<br>OFFICIAL SEAL
+        </div>
+
+        <div class="signature">
+          <div class="sign-line"><span class="sign-img" style="color: #1a1a1a;">E. Savva</span></div>
+          <p>Ms. Elena Savva</p>
+          <span>Chief Executive Officer, LUMEN Bank</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-meta">
+      <div>Form CBC/LIC-001 Rev. 2023<br>Verification code: LUMEN-2023-9A7B</div>
+      <div class="qr-code">SCAN TO<br>VERIFY</div>
+    </div>
+  </div>
+
+  <!-- CERTIFICATE 2: CDIC -->
+  <div class="certificate" style="--doc-bg: #F4F6F9; --navy: #0F3A68; --gold: #D3273E;">
+    <div class="watermark" style="font-size: 100px; opacity: 0.04;">INSURED DEPOSITS</div>
+    <div class="border-outer"></div>
+    <div class="border-inner" style="border-width: 2px;"></div>
+    <div class="corner tl" style="background: var(--gold); border: none;"></div>
+    <div class="corner tr" style="background: var(--gold); border: none;"></div>
+    <div class="corner bl" style="background: var(--gold); border: none;"></div>
+    <div class="corner br" style="background: var(--gold); border: none;"></div>
+
+    <div class="content">
+      <div class="header-crests">
+        <div style="font-family: 'Inter', sans-serif; font-weight: 900; font-size: 32px; color: var(--navy); letter-spacing: -1px;">cdic<span style="color:var(--gold);">.</span>ca</div>
+        <div class="crest" style="border-color: var(--navy);">LUMEN<br><span style="font-size: 8px; font-family: 'Inter', sans-serif;">BANK</span></div>
+      </div>
+      <div class="divider" style="background: var(--navy); height: 2px;"></div>
+
+      <h1 style="color: var(--navy); font-size: 28px;">Certificate of Membership and Insurance</h1>
+      <h2 style="font-family: 'Inter', sans-serif; font-style: normal; font-weight: 500; color: #555; letter-spacing: 1px; margin-bottom: 30px;">Canada Deposit Insurance Corporation (CDIC)</h2>
+
+      <div class="details" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <div><strong>Member Institution:</strong> LUMEN Bank (Canada)</div>
+        <div><strong>Membership Number:</strong> OSFI/FBS/2024-0891</div>
+        <div><strong>Entity Type:</strong> Schedule II Foreign Bank Subsidiary</div>
+        <div><strong>Effective Date:</strong> 1 January 2024</div>
+      </div>
+
+      <div class="body-text" style="font-size: 14px;">
+        This certifies that <strong>LUMEN Bank</strong>, operating as a Schedule II Foreign Bank Subsidiary in Canada, is an official member of the Canada Deposit Insurance Corporation (CDIC). 
+      </div>
+
+      <div class="list-section">
+        <h3 style="font-family: 'Inter', sans-serif; font-weight: 700;">Insurance Coverage Details:</h3>
+        <ul style="list-style-type: square; color: var(--navy);">
+          <li><strong style="color: var(--text);">Eligible deposits are insured up to CAD $100,000</strong> per depositor, per insured category.</li>
+          <li><span style="color: var(--text);">Coverage includes savings accounts, chequing accounts, term deposits, and GICs.</span></li>
+          <li><span style="color: var(--text);">Funds held in foreign currencies (e.g., USD, EUR) may also be eligible under updated CDIC rules.</span></li>
+        </ul>
+      </div>
+
+      <div class="list-section">
+        <h3 style="font-family: 'Inter', sans-serif; font-weight: 700;">Regulatory Oversight:</h3>
+        <p style="margin-top:5px;">Office of the Superintendent of Financial Institutions (OSFI)</p>
+      </div>
+
+      <div class="body-text" style="font-size: 11px; color: #666; margin-top: 40px; background: rgba(255,0,0,0.05); padding: 15px; border-left: 3px solid var(--gold);">
+        <strong>Important Note:</strong> Insurance is subject to CDIC rules, limits, and exclusions. Crypto-assets, mutual funds, and stocks are not covered by CDIC. Full terms and conditions are available in the LUMEN Bank Client Agreement and on the official CDIC website.
+      </div>
+
+      <div class="footer-signatures" style="margin-top: auto; justify-content: flex-end;">
+        <div class="official-stamp" style="left: 30%; bottom: 0; border-color: var(--navy); color: var(--navy); transform: rotate(10deg);">
+          CDIC<br>PROTECTED<br>PROTÉGÉ
+        </div>
+
+        <div class="signature">
+          <div class="sign-line"><span class="sign-img" style="color: #1a1a1a;">J. Smith</span></div>
+          <p>Jonathan Smith</p>
+          <span>President & CEO, CDIC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-meta">
+      <div>Form CDIC-MEM-2024<br>LUMEN Bank is committed to protecting your deposits.</div>
+    </div>
+  </div>
+
+</body>
+</html>

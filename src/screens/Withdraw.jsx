@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import { usePbClient } from '../hooks/usePbClient';
 
 function OTPModal({ onVerify, onClose, t }) {
   const [code, setCode] = useState('');
@@ -112,13 +113,19 @@ const SuccessReceipt = ({ data, onBack, t }) => {
   const txId = React.useMemo(() => '#' + Math.random().toString(36).substr(2, 9).toUpperCase(), []);
   
   const handleShare = () => {
+    const dateStr = new Date().toLocaleString('en-CA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const lines = [
+      `LUMEN Bank — Withdrawal`,
+      `Amount: CAD ${parseFloat(data.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      `To: ${data.account}`,
+      `Date: ${dateStr}`,
+      `TxID: ${txId}`,
+      `Status: Pending review`,
+    ].join('\n');
     if (navigator.share) {
-      navigator.share({
-        title: 'Withdrawal Receipt',
-        text: `Successfully withdrew $${data.amount} to account ${data.account}.\nTxID: ${txId}`,
-      }).catch(() => console.log('Share canceled'));
+      navigator.share({ text: lines }).catch(() => {});
     } else {
-      alert('Share feature is not supported on this device/browser.');
+      navigator.clipboard.writeText(lines).catch(() => {});
     }
   };
 
@@ -151,6 +158,7 @@ const SuccessReceipt = ({ data, onBack, t }) => {
 
 export default function Withdraw({ onNavigate, showToast }) {
   const { t, addTransaction } = useApp();
+  const { submitOperation } = usePbClient();
   const [account, setAccount] = useState('');
   const [amount, setAmount] = useState('');
   const [showOTP, setShowOTP] = useState(false);
@@ -158,19 +166,25 @@ export default function Withdraw({ onNavigate, showToast }) {
 
   const isValid = account.length > 5 && parseFloat(amount) > 0;
 
-  const handleOTPVerify = () => {
+  const handleOTPVerify = async () => {
     setShowOTP(false);
     setIsSuccess(true);
     showToast(t('common.success'));
-    
-    addTransaction({ 
-      type: 'outgoing', 
-      title: `Withdrawal to ${account.substring(0, 4)}...`, 
-      description: 'Funds Withdrawal', 
-      amount: -parseFloat(amount), 
-      category: 'transfer', 
-      status: 'completed'
+    addTransaction({
+      type: 'outgoing',
+      title: `Withdrawal to ${account.substring(0, 4)}...`,
+      description: 'Funds Withdrawal',
+      amount: -parseFloat(amount),
+      category: 'transfer',
+      status: 'pending'
     });
+    try {
+      await submitOperation('WITHDRAW', {
+        amount: parseFloat(amount),
+        currency: 'USD',
+        details: { destination: account },
+      });
+    } catch {}
   };
 
   if (isSuccess) return <div className="h-full bg-white dark:bg-black"><SuccessReceipt data={{ amount, account }} onBack={() => onNavigate('/')} t={t} /></div>;

@@ -7,7 +7,14 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      injectManifest: {
+        injectionPoint: undefined,
+      },
       includeAssets: ['favicon.ico'],
       manifest: {
         name: 'LUMEN Bank',
@@ -26,6 +33,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/index-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`,
+      },
     },
   },
   server: {

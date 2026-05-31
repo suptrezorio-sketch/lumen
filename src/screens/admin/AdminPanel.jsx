@@ -26,35 +26,43 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const fetchUsers = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const res = await fetch(`${backendUrl}/admin/users`);
-    const data = await res.json();
-    setUsers(data);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const res = await fetch(`${backendUrl}/admin/users`);
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch { setUsers([]); }
   };
 
   const fetchTransactions = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const res = await fetch(`${backendUrl}/admin/transactions`);
-    const data = await res.json();
-    setTransactions(data);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const res = await fetch(`${backendUrl}/admin/transactions`);
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch { setTransactions([]); }
   };
 
   const fetchCreditRequests = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const res = await fetch(`${backendUrl}/admin/credit-requests`);
-    const data = await res.json();
-    setCreditRequests(data);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const res = await fetch(`${backendUrl}/admin/credit-requests`);
+      const data = await res.json();
+      setCreditRequests(Array.isArray(data) ? data : []);
+    } catch { setCreditRequests([]); }
   };
 
   const fetchDocuments = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const res = await fetch(`${backendUrl}/admin/documents`);
-    const data = await res.json();
-    setDocuments(data);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const res = await fetch(`${backendUrl}/admin/documents`);
+      const data = await res.json();
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch { setDocuments([]); }
   };
 
   const updateStatus = async (userId, status) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/user/${userId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -64,7 +72,7 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const updateBalance = async (userId, balance) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/user/${userId}/balance`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -74,7 +82,7 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const handleTxStatus = async (txId, status) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/transaction/${txId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +92,7 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const handleCreditStatus = async (reqId, status) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/credit-request/${reqId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -95,7 +103,7 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const handleDocStatus = async (docId, status) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/document/${docId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -106,7 +114,7 @@ export default function AdminPanel({ onNavigate }) {
   };
 
   const sendPush = async () => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     await fetch(`${backendUrl}/admin/chat/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -150,7 +158,7 @@ export default function AdminPanel({ onNavigate }) {
             <button 
               onClick={async () => {
                 if (confirm('Seed demo data?')) {
-                  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+                  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
                   await fetch(`${backendUrl}/admin/seed`, { method: 'POST' });
                   fetchAllData();
                 }

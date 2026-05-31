@@ -2,207 +2,562 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import LumenPhoneInput from '../components/inputs/LumenPhoneInput';
+import LumenLogo from '../components/LumenLogo';
+import { playSound } from '../utils/sounds';
 
 const STEPS = ['language', 'register', 'pin', 'confirmPin', 'permissions'];
 
 export default function Onboarding() {
-  const { t, setLang, completeOnboarding, bypassOnboarding, lang } = useApp();
+  const { t, setLang, completeOnboarding, lang } = useApp();
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
   const [selectedLang, setSelectedLang] = useState(lang);
   const [regForm, setRegForm] = useState({ name: '', phone: '', email: '' });
+  const [isValidatingPhone, setIsValidatingPhone] = useState(false);
+  const [showLoginInfo, setShowLoginInfo] = useState(false);
+  const [loginRequestIdentifier, setLoginRequestIdentifier] = useState('');
+  const [isRequestingLink, setIsRequestingLink] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+
+  const goBack = () => {
+    if (showLoginInfo) { setShowLoginInfo(false); return; }
+    playSound('click');
+    setDirection(-1);
+    setError('');
+    if (step === 2) setPin('');
+    if (step === 3) setConfirmPin('');
+    if (step > 0) setStep(s => s - 1);
+  };
+
+  const goNext = (nextStep) => {
+    setDirection(1);
+    setStep(nextStep);
+    setError('');
+  };
 
   const handleDigit = (d) => {
-    if (STEPS[step] === 'pin' && pin.length < 6) setPin(pin + d);
-    if (STEPS[step] === 'confirmPin' && confirmPin.length < 6) setConfirmPin(confirmPin + d);
+    playSound('click');
+    if (STEPS[step] === 'pin' && pin.length < 6) {
+      setPin(prev => prev + d);
+    }
+    if (STEPS[step] === 'confirmPin' && confirmPin.length < 6) {
+      const next = confirmPin + d;
+      setConfirmPin(next);
+      if (next.length === 6) {
+        setTimeout(() => {
+          if (next === pin) {
+            playSound('success');
+            setError('');
+            goNext(4);
+          } else {
+            playSound('error');
+            setError(t('onboarding.pinMismatch') || 'PINs do not match. Try again.');
+            setConfirmPin('');
+          }
+        }, 300);
+      }
+    }
   };
 
   const handleDelete = () => {
-    if (STEPS[step] === 'pin') setPin(pin.slice(0, -1));
-    if (STEPS[step] === 'confirmPin') setConfirmPin(confirmPin.slice(0, -1));
+    playSound('click');
+    if (STEPS[step] === 'pin') setPin(p => p.slice(0, -1));
+    if (STEPS[step] === 'confirmPin') setConfirmPin(p => p.slice(0, -1));
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (STEPS[step] === 'language') {
+      playSound('click');
       setLang(selectedLang);
-      setStep(1);
+      goNext(1);
     } else if (STEPS[step] === 'register') {
-      if (regForm.name && regForm.phone) setStep(2);
+      if (!regForm.name || !regForm.phone || !regForm.email) return;
+      playSound('click');
+      setIsValidatingPhone(true);
+      try {
+        const { validatePhone } = await import('../services/phoneValidation');
+        const phoneRes = await validatePhone(regForm.phone);
+        if (!phoneRes.valid && !phoneRes.error) {
+          playSound('error');
+          setError('Invalid phone number format.');
+        } else {
+          setRegForm(f => ({ ...f, phone: phoneRes.formatted }));
+          goNext(2);
+        }
+      } catch {
+        goNext(2);
+      } finally {
+        setIsValidatingPhone(false);
+      }
     } else if (STEPS[step] === 'pin' && pin.length === 6) {
-      setStep(3);
-    } else if (STEPS[step] === 'confirmPin') {
-      if (confirmPin === pin) { setStep(4); setError(''); }
-      else { setError(t('onboarding.pinMismatch')); setConfirmPin(''); }
+      playSound('click');
+      goNext(3);
     } else if (STEPS[step] === 'permissions') {
+      playSound('click');
       completeOnboarding(pin, selectedLang, regForm);
     }
   };
 
-  const PinDots = ({ value }) => (
-    <div className="flex gap-3 justify-center my-8">
-      {[0,1,2,3,4,5].map(i => (
-        <motion.div key={i} animate={{ scale: i < value.length ? 1.2 : 1 }}
-          className={`w-4 h-4 rounded-full border-2 transition-all ${i < value.length ? 'bg-lumen-black dark:bg-white border-lumen-black dark:border-white' : 'border-gray-300'}`} />
+  const handleRequestLoginLink = async () => {
+    if (!loginRequestIdentifier) return;
+    playSound('click');
+    setIsRequestingLink(true);
+    try {
+      // Just simulate for now since backend might not have the collection yet
+      await new Promise(r => setTimeout(r, 1000));
+      // In a real app we would call pb.collection('login_requests').create({ identifier: loginRequestIdentifier })
+      setRequestSent(true);
+      playSound('success');
+    } catch (e) {
+      console.error(e);
+      playSound('error');
+    } finally {
+      setIsRequestingLink(false);
+    }
+  };
+
+  const PinDots = ({ value, hasError }) => (
+    <div className="flex gap-4 justify-center my-8">
+      {[0, 1, 2, 3, 4, 5].map(i => (
+        <motion.div
+          key={i}
+          animate={{ scale: i < value.length ? 1.15 : 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          className={`w-4 h-4 rounded-full transition-colors duration-150 ${
+            hasError && i < value.length
+                  ? 'bg-red-500'
+                  : i < value.length
+                    ? 'bg-black dark:bg-white'
+                    : 'bg-[#E5E5EA] dark:bg-[#2C2C2E]'
+              }`}
+        />
       ))}
     </div>
   );
 
   const Keypad = () => (
-    <div className="grid grid-cols-3 gap-x-8 gap-y-4 px-6 mt-4 w-full max-w-[320px] mx-auto">
-      {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((k, i) => (
-        <motion.button key={i} whileTap={{ scale: 0.9 }}
-          onClick={() => k === 'del' ? handleDelete() : k !== '' ? handleDigit(String(k)) : null}
-          className={`w-[76px] h-[76px] mx-auto rounded-full text-3xl font-medium flex items-center justify-center ${k === '' ? 'invisible' : 'bg-gray-50 dark:bg-[#1C1C1E] text-lumen-black dark:text-white active:bg-gray-200'}`}>
-          {k === 'del' ? <Icons.ArrowLeft size={28} /> : k}
-        </motion.button>
+    <div className="grid grid-cols-3 gap-y-4 gap-x-2 w-full max-w-[280px] mx-auto mt-2">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => (
+        <button
+          key={k}
+          onClick={() => handleDigit(String(k))}
+          className="w-[76px] h-[76px] mx-auto rounded-full bg-[#F2F2F7] dark:bg-[#1C1C1E] text-black dark:text-white text-[26px] font-normal flex items-center justify-center active:bg-[#E5E5EA] dark:active:bg-[#2C2C2E] transition-colors"
+        >
+          {k}
+        </button>
       ))}
+      <div />
+      <button
+        onClick={() => handleDigit('0')}
+        className="w-[76px] h-[76px] mx-auto rounded-full bg-[#F2F2F7] dark:bg-[#1C1C1E] text-black dark:text-white text-[26px] font-normal flex items-center justify-center active:bg-[#E5E5EA] dark:active:bg-[#2C2C2E] transition-colors"
+      >
+        0
+      </button>
+      <button
+        onClick={handleDelete}
+        className="w-[76px] h-[76px] mx-auto rounded-full flex items-center justify-center active:bg-gray-100 dark:active:bg-[#1C1C1E] transition-colors"
+      >
+        <Icons.ArrowLeft size={24} className="text-[#8E8E93]" />
+      </button>
     </div>
   );
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-black safe-top">
+    <div className="h-full flex flex-col bg-white dark:bg-black overflow-hidden">
       <AnimatePresence mode="wait">
-        <motion.div key={step} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-          transition={{ duration: 0.3 }} className="flex-1 flex flex-col">
-          
-          {STEPS[step] === 'language' && (
-            <div className="flex-1 flex flex-col items-center justify-center px-8">
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                className="w-16 h-16 bg-lumen-black dark:bg-white rounded-2xl flex items-center justify-center mb-6">
-                <img src="https://img.icons8.com/?size=100&id=80t6WVLmSeOM&format=png&color=ffffff" width="32" className="dark:invert" alt="Logo" />
-              </motion.div>
-              <h1 className="text-3xl font-bold text-lumen-black dark:text-white text-center">{t('onboarding.welcome')}</h1>
-              <p className="text-sm text-gray-500 mt-2 text-center">{t('onboarding.subtitle')}</p>
-              <div className="w-full mt-10 space-y-3">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t('onboarding.selectLanguage')}</p>
-                {[{code:'en',label:'English',flag:'🇨🇦'},{code:'fr',label:'Français',flag:'🇫🇷'}].map(l => (
-                  <button key={l.code} onClick={() => setSelectedLang(l.code)}
-                    className={`w-full p-4 rounded-2xl flex items-center gap-4 text-left transition-all ${selectedLang === l.code ? 'bg-lumen-black text-white' : 'bg-gray-50 dark:bg-[#1C1C1E] text-lumen-black dark:text-white'}`}>
-                    <span className="text-2xl">{l.flag}</span>
-                    <span className="font-semibold">{l.label}</span>
-                    {selectedLang === l.code && <Icons.Check size={20} className="ml-auto" />}
-                  </button>
-                ))}
-              </div>
-              <motion.button whileTap={{ scale: 0.97 }} onClick={nextStep}
-                className="w-full mt-8 py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold text-base">
-                {t('onboarding.continue')}
+
+        {/* ── Already have an account info screen ── */}
+        {showLoginInfo ? (
+          <motion.div
+            key="login-info"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex-1 flex flex-col"
+          >
+            <div className="pt-14 px-6">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={goBack}
+                className="w-10 h-10 flex items-center justify-center"
+              >
+                <Icons.ArrowLeft size={24} className="text-black dark:text-white" />
               </motion.button>
-              
-              <button onClick={() => bypassOnboarding()} className="mt-4 text-xs font-black text-gray-400 uppercase tracking-widest active:text-lumen-black dark:active:text-white">
-                {t('common.login') || 'Sign In'}
-              </button>
             </div>
-          )}
 
-          {STEPS[step] === 'register' && (
-            <div className="flex-1 flex flex-col pt-12 px-8">
-              <h1 className="text-2xl font-bold text-lumen-black dark:text-white mb-2">{t('register.title')}</h1>
-              <p className="text-sm text-gray-500 mb-8">{t('register.subtitle')}</p>
-              
-              <div className="space-y-4">
-                <div className="flex flex-col">
-                  <label className="text-xs font-semibold text-gray-500 uppercase ml-1">{t('register.fullName')}</label>
-                  <input type="text" value={regForm.name} onChange={e => setRegForm({...regForm, name: e.target.value})} placeholder="John Doe"
-                    className="w-full mt-1 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-[16px] text-lumen-black dark:text-white outline-none" />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-semibold text-gray-500 uppercase ml-1">{t('register.phone')}</label>
-                  <input type="tel" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value})} placeholder="+1 000 000 0000"
-                    className="w-full mt-1 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-[16px] text-lumen-black dark:text-white outline-none" />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-semibold text-gray-500 uppercase ml-1">{t('register.email')}</label>
-                  <input type="email" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} placeholder="john@example.com"
-                    className="w-full mt-1 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl text-[16px] text-lumen-black dark:text-white outline-none" />
-                </div>
-              </div>
-              
-              <div className="mt-auto mb-8 w-full flex flex-col gap-3">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={nextStep} disabled={!regForm.name || !regForm.phone}
-                  className={`w-full py-4 rounded-2xl font-bold ${regForm.name && regForm.phone ? 'bg-lumen-black dark:bg-white text-white dark:text-black' : 'bg-gray-200 dark:bg-[#1C1C1E] text-gray-400'}`}>
-                  {t('common.next')}
-                </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => bypassOnboarding()}
-                  className="w-full py-4 bg-gray-50 dark:bg-[#1C1C1E] text-lumen-black dark:text-white rounded-2xl font-bold">
-                  Already have an account? Log In
-                </motion.button>
-              </div>
-            </div>
-          )}
-
-          {STEPS[step] === 'pin' && (
-            <div className="flex-1 flex flex-col items-center pt-20 px-6">
-              <div className="w-14 h-14 bg-lumen-black dark:bg-white rounded-2xl flex items-center justify-center mb-4">
-                <Icons.Lock size={24} className="text-white dark:text-black" />
-              </div>
-              <h2 className="text-2xl font-bold text-lumen-black dark:text-white">{t('onboarding.createPin')}</h2>
-              <p className="text-sm text-gray-500 mt-1">{t('onboarding.createPinDesc')}</p>
-              <PinDots value={pin} />
-              <Keypad />
-              {pin.length === 6 && (
-                <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileTap={{ scale: 0.97 }} onClick={nextStep}
-                  className="mt-6 px-10 py-3.5 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold">
-                  {t('common.next')}
-                </motion.button>
-              )}
-            </div>
-          )}
-
-          {STEPS[step] === 'confirmPin' && (
-            <div className="flex-1 flex flex-col items-center pt-20 px-6">
-              <div className="w-14 h-14 bg-lumen-black dark:bg-white rounded-2xl flex items-center justify-center mb-4">
-                <Icons.Shield size={24} className="text-white dark:text-black" />
-              </div>
-              <h2 className="text-2xl font-bold text-lumen-black dark:text-white">{t('onboarding.confirmPin')}</h2>
-              <p className="text-sm text-gray-500 mt-1">{t('onboarding.confirmPinDesc')}</p>
-              {error && <p className="text-red-500 text-sm mt-2 font-medium">{error}</p>}
-              <PinDots value={confirmPin} />
-              <Keypad />
-              {confirmPin.length === 6 && (
-                <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileTap={{ scale: 0.97 }} onClick={nextStep}
-                  className="mt-6 px-10 py-3.5 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold">
-                  {t('common.confirm')}
-                </motion.button>
-              )}
-            </div>
-          )}
-
-          {STEPS[step] === 'permissions' && (
-            <div className="flex-1 flex flex-col items-center justify-center px-8">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}
-                className="w-24 h-24 bg-gray-50 dark:bg-[#1C1C1E] rounded-[24px] flex items-center justify-center mb-6">
-                <Icons.Shield size={48} className="text-lumen-black dark:text-white" />
+            <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-16 h-16 bg-gray-100 dark:bg-[#1C1C1E] rounded-2xl flex items-center justify-center mb-6"
+              >
+                <Icons.Lock size={28} className="text-black dark:text-white" />
               </motion.div>
-              <h2 className="text-2xl font-bold text-lumen-black dark:text-white text-center">{t('permissions.title')}</h2>
-              <p className="text-sm text-gray-500 mt-2 text-center mb-6">
-                {t('permissions.description')}
+
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-3">
+                Sign in to LUMEN
+              </h2>
+              <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-xs">
+                Your bank will send a secure login link to your email or phone. Open that link on this device to sign in automatically.
               </p>
-              
-              <div className="w-full bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl p-4 space-y-4 mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><Icons.Bell size={16}/></div>
-                  <div className="text-sm font-medium text-lumen-black dark:text-white">{t('permissions.notifications')}</div>
+
+              {requestSent ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full max-w-xs p-5 rounded-2xl bg-[#E8F8EE] dark:bg-green-900/20 text-center"
+                >
+                  <p className="text-[#108A44] dark:text-green-400 font-semibold mb-2">Request sent!</p>
+                  <p className="text-sm text-green-800 dark:text-green-300">
+                    We will review your request and send a login link to <b>{loginRequestIdentifier}</b> shortly.
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="w-full max-w-xs mt-2 space-y-4">
+                  <input
+                    type="text"
+                    value={loginRequestIdentifier}
+                    onChange={e => setLoginRequestIdentifier(e.target.value)}
+                    placeholder="Email or Phone Number"
+                    className="w-full px-5 py-4 rounded-2xl bg-[#F9F9F9] dark:bg-[#1C1C1E] text-black dark:text-white text-[15px] font-medium outline-none placeholder:text-gray-400 text-center"
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleRequestLoginLink}
+                    disabled={!loginRequestIdentifier || isRequestingLink}
+                    className={`w-full py-4 rounded-2xl font-semibold text-[17px] ${
+                      loginRequestIdentifier && !isRequestingLink
+                        ? 'bg-black dark:bg-white text-white dark:text-black'
+                        : 'bg-gray-100 dark:bg-[#1C1C1E] text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {isRequestingLink ? 'Sending...' : 'Ask for a login link'}
+                  </motion.button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center"><Icons.Eye size={16}/></div>
-                  <div className="text-sm font-medium text-lumen-black dark:text-white">{t('permissions.camera')}</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center"><Icons.Fingerprint size={16}/></div>
-                  <div className="text-sm font-medium text-lumen-black dark:text-white">{t('permissions.biometric')}</div>
-                </div>
-              </div>
-              
-              <motion.button whileTap={{ scale: 0.97 }} onClick={nextStep}
-                className="w-full py-4 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold">
-                {t('permissions.grantAccess')}
+              )}
+            </div>
+
+            <div className="px-8 pb-12">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={goBack}
+                className="w-full py-4 border-2 border-gray-100 dark:border-[#2C2C2E] rounded-2xl text-black dark:text-white font-semibold text-base"
+              >
+                Back to Welcome
               </motion.button>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+
+        ) : (
+          /* ── Main onboarding steps ── */
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: direction * 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -50 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex-1 flex flex-col"
+          >
+            {/* Back arrow & Logo — shown on all steps except language */}
+            {step > 0 && (
+              <div className="pt-14 px-6 flex justify-between items-center">
+                <button
+                  onClick={goBack}
+                  className="p-2 -ml-2 text-black dark:text-white active:opacity-50 transition-opacity"
+                >
+                  <Icons.ArrowLeft size={28} strokeWidth={2.5} />
+                </button>
+                <LumenLogo size={28} variant="auto" />
+              </div>
+            )}
+
+            {/* ── Language ── */}
+            {STEPS[step] === 'language' && (
+              <div className="flex-1 flex flex-col items-center px-8 pt-16">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="mb-10"
+                >
+                  <LumenLogo size={52} variant="auto" />
+                </motion.div>
+
+                <motion.h1
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="text-4xl font-bold text-black dark:text-white mb-2 text-center"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Welcome
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-gray-400 mb-10 text-center"
+                >
+                  Select your language
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="w-full space-y-3 max-w-xs"
+                >
+                  {[
+                    { code: 'en', label: 'English', flag: '🇬🇧' },
+                    { code: 'fr', label: 'Français', flag: '🇨🇦' },
+                  ].map(l => (
+                    <motion.button
+                      key={l.code}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setSelectedLang(l.code)}
+                      className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all border-2 ${
+                        selectedLang === l.code
+                          ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                          : 'border-gray-100 dark:border-[#2C2C2E] text-black dark:text-white bg-white dark:bg-transparent'
+                      }`}
+                    >
+                      <span className="text-2xl">{l.flag}</span>
+                      <span className="font-semibold text-lg">{l.label}</span>
+                      {selectedLang === l.code && (
+                        <Icons.Check size={20} className="ml-auto" />
+                      )}
+                    </motion.button>
+                  ))}
+                </motion.div>
+
+                <div className="mt-auto w-full max-w-xs pb-8 pt-8">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={nextStep}
+                    className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-semibold text-base"
+                  >
+                    Continue
+                  </motion.button>
+                  <button
+                    onClick={() => setShowLoginInfo(true)}
+                    className="w-full py-3 mt-1 text-gray-400 text-sm font-medium"
+                  >
+                    Already have an account?
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Register ── */}
+            {STEPS[step] === 'register' && (
+              <div className="flex-1 flex flex-col px-8 pt-4">
+                <motion.h1
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-3xl font-bold text-black dark:text-white mb-1 mt-2"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Create account
+                </motion.h1>
+                <p className="text-gray-400 text-sm mb-8">Step 1 of 3</p>
+
+                <div className="flex-1 space-y-5">
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 text-sm"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2 block">
+                      Full name
+                    </label>
+                    <input
+                      type="text"
+                      value={regForm.name}
+                      onChange={e => { setRegForm(f => ({ ...f, name: e.target.value })); setError(''); }}
+                      placeholder="John Doe"
+                      className="w-full px-5 py-4 rounded-2xl bg-[#F9F9F9] dark:bg-[#1C1C1E] text-black dark:text-white text-[15px] font-medium outline-none placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2 block">
+                      Phone
+                    </label>
+                    <LumenPhoneInput
+                      value={regForm.phone}
+                      onChange={val => { setRegForm(f => ({ ...f, phone: val })); setError(''); }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.08em] mb-2 block">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={regForm.email}
+                      onChange={e => { setRegForm(f => ({ ...f, email: e.target.value })); setError(''); }}
+                      placeholder="john@example.com"
+                      className="w-full px-5 py-4 rounded-2xl bg-[#F9F9F9] dark:bg-[#1C1C1E] text-black dark:text-white text-[15px] font-medium outline-none placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-6 pb-8">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={nextStep}
+                    disabled={!regForm.name || !regForm.phone || !regForm.email || isValidatingPhone}
+                    className={`w-full py-4 rounded-2xl font-semibold text-base flex justify-center items-center ${
+                      regForm.name && regForm.phone && regForm.email && !isValidatingPhone
+                        ? 'bg-black dark:bg-white text-white dark:text-black'
+                        : 'bg-gray-100 dark:bg-[#1C1C1E] text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {isValidatingPhone
+                      ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      : 'Next'
+                    }
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Create PIN ── */}
+            {STEPS[step] === 'pin' && (
+              <div className="flex-1 flex flex-col items-center px-6 pt-2">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="my-6"
+                >
+                  <div className="w-[84px] h-[84px] flex items-center justify-center">
+                    <Icons.Pin1 size={84} strokeWidth={1.5} className="text-black dark:text-white" />
+                  </div>
+                </motion.div>
+
+                <h2 className="text-2xl font-bold text-black dark:text-white mb-1">Create a PIN</h2>
+                <p className="text-gray-400 text-sm mb-0.5">Step 2 of 3</p>
+                <p className="text-gray-400 text-sm text-center">Choose a 6-digit code to secure your account</p>
+
+                <PinDots value={pin} />
+                <Keypad />
+
+                <div className="w-full max-w-[280px] mt-5 pb-6">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={nextStep}
+                    disabled={pin.length < 6}
+                    className={`w-full py-4 rounded-2xl font-semibold text-base transition-all ${
+                      pin.length === 6
+                        ? 'bg-black dark:bg-white text-white dark:text-black'
+                        : 'bg-gray-100 dark:bg-[#1C1C1E] text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                    }`}
+                  >
+                    Continue
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Confirm PIN ── */}
+            {STEPS[step] === 'confirmPin' && (
+              <div className="flex-1 flex flex-col items-center px-6 pt-2">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="my-6"
+                >
+                  <div className="w-[84px] h-[84px] flex items-center justify-center">
+                    <Icons.Pin2 size={84} strokeWidth={1.5} className="text-black dark:text-white" />
+                  </div>
+                </motion.div>
+
+                <h2 className="text-2xl font-bold text-black dark:text-white mb-1">Confirm PIN</h2>
+                <p className="text-gray-400 text-sm mb-0.5">Step 3 of 3</p>
+                <p className="text-gray-400 text-sm text-center">Enter your code again</p>
+
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-red-500 text-sm font-medium mt-3"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+
+                <PinDots value={confirmPin} hasError={!!error} />
+                <Keypad />
+              </div>
+            )}
+
+            {/* ── Permissions ── */}
+            {STEPS[step] === 'permissions' && (
+              <div className="flex-1 flex flex-col px-8 pt-4">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="mb-5 mt-2"
+                >
+                  <div className="w-[84px] h-[84px] flex items-center justify-center">
+                    <Icons.PermissionsBadge size={84} strokeWidth={1.5} className="text-black dark:text-white" />
+                  </div>
+                </motion.div>
+
+                <h2 className="text-2xl font-bold text-black dark:text-white mb-2">One last thing</h2>
+                <p className="text-gray-400 text-sm mb-8">Allow access to get the most out of LUMEN</p>
+
+                <div className="flex-1 space-y-3">
+                  {[
+                    { icon: Icons.Bell, label: 'Notifications', desc: 'Stay updated on your accounts' },
+                    { icon: Icons.Eye, label: 'Camera', desc: 'For Face ID and document upload' },
+                    { icon: Icons.Fingerprint, label: 'Biometrics', desc: 'Fast and secure login' },
+                  ].map((item, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + i * 0.07 }}
+                      className="p-4 rounded-2xl border border-gray-100 dark:border-[#2C2C2E] flex items-center gap-4"
+                    >
+                      <div className="w-10 h-10 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl flex items-center justify-center flex-shrink-0">
+                        <item.icon size={20} className="text-black dark:text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-black dark:text-white text-sm">{item.label}</p>
+                        <p className="text-xs text-gray-400">{item.desc}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="pt-6 pb-8">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={nextStep}
+                    className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-semibold text-base"
+                  >
+                    Continue to LUMEN
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

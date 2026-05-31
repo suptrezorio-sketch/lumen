@@ -1,54 +1,95 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import pb from '../lib/pb';
 
 export default function Chat({ onNavigate }) {
   const { t } = useApp();
-  const [messages, setMessages] = useState([{ id: 1, text: t('chat.welcome'), sender: 'agent', time: '10:30' }]);
+  const clientId = localStorage.getItem('lumen_pb_client_id');
+  const [threadId, setThreadId] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardMode, setKeyboardMode] = useState('alpha');
   const endRef = useRef(null);
 
+  const fmt = (d) => new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  // Load or create thread + messages, subscribe realtime
+  useEffect(() => {
+    if (!clientId) return;
+    let unsub = null;
+    (async () => {
+      try {
+        // Re-auth if authStore empty
+        if (!pb.authStore.isValid) {
+          const email = JSON.parse(localStorage.getItem('lumen_user_data') || '{}').email;
+          const pass = localStorage.getItem('lumen_pb_pass');
+          if (email && pass) { try { await pb.collection('clients').authWithPassword(email, pass); } catch {} }
+        }
+        // get or create support thread
+        let thr;
+        const list = await pb.collection('support_threads').getList(1, 1, { filter: `client = '${clientId}'` });
+        if (list.items.length > 0) {
+          thr = list.items[0];
+        } else {
+          thr = await pb.collection('support_threads').create({ client: clientId, status: 'open' });
+          // seed welcome message
+          await pb.collection('support_messages').create({
+            thread: thr.id, sender_type: 'admin', sender_id: 'system',
+            text: t('chat.welcome'),
+          });
+        }
+        setThreadId(thr.id);
+        // load existing messages
+        const msgs = await pb.collection('support_messages').getList(1, 100, {
+          filter: `thread = '${thr.id}'`, sort: 'created',
+        });
+        setMessages(msgs.items.map(m => ({
+          id: m.id,
+          text: m.text,
+          sender: m.sender_type === 'admin' ? 'agent' : 'user',
+          time: fmt(m.created),
+        })));
+        // realtime subscription
+        unsub = await pb.collection('support_messages').subscribe('*', (e) => {
+          if (e.record.thread !== thr.id) return;
+          if (e.action === 'create') {
+            setMessages(p => {
+              if (p.find(m => m.id === e.record.id)) return p;
+              return [...p, { id: e.record.id, text: e.record.text, sender: e.record.sender_type === 'admin' ? 'agent' : 'user', time: fmt(e.record.created) }];
+            });
+          }
+        });
+      } catch {}
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [clientId]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing, showKeyboard]);
 
-  useEffect(() => {
-    import('../services/socketService').then(({ default: socket }) => {
-      const handleNewMessage = (msg) => {
-        setMessages(p => [...p, { 
-          id: Date.now() + Math.random(), 
-          text: msg.text, 
-          sender: msg.sender || 'agent', 
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) 
-        }]);
-      };
-      
-      socket.on('CHAT_MESSAGE', handleNewMessage);
-      
-      return () => {
-        socket.off('CHAT_MESSAGE', handleNewMessage);
-      };
-    });
-  }, []);
-
   const quickReplies = [t('chat.quickBalance'), t('chat.quickCards'), t('chat.quickTransfer'), t('chat.quickOther')];
 
-  const sendMsg = (text) => {
-    if (!text.trim()) return;
-    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setMessages(p => [...p, { id: Date.now(), text, sender: 'user', time: now }]);
+  const sendMsg = useCallback(async (text) => {
+    if (!text.trim() || !clientId) return;
     setInput('');
     setShowKeyboard(false);
-    
-    // Send to backend via socket
-    import('../services/socketService').then(({ default: socket }) => {
-      socket.emit('chatMessage', { text, sender: 'user' });
-    });
-  };
+    try {
+      let tid = threadId;
+      if (!tid) {
+        const thr = await pb.collection('support_threads').create({ client: clientId, status: 'open' });
+        setThreadId(thr.id);
+        tid = thr.id;
+      }
+      await pb.collection('support_messages').create({
+        thread: tid, sender_type: 'client', sender_id: clientId, text,
+      });
+    } catch {}
+  }, [clientId, threadId]);
 
   const handleKey = (key) => {
     if (key === 'del') setInput(p => p.slice(0, -1));

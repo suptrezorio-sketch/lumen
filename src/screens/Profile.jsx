@@ -4,10 +4,12 @@ import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
 
 export default function Profile({ onNavigate, showToast }) {
-  const { t, user, lang, setLang, darkMode, setDarkMode, biometric, setBiometric, twoFactor, setTwoFactor, notifications, setNotifications, kycStatus, setKycStatus, amlStatus, setAmlStatus, logout, installApp, deferredPrompt } = useApp();
+  const { t, user, lang, setLang, darkMode, setDarkMode, biometric, setBiometric, twoFactor, setTwoFactor, notifications, setNotifications, kycStatus, setKycStatus, amlStatus, setAmlStatus, logout, changePin, installApp, deferredPrompt } = useApp();
   const [view, setView] = useState('main');
   const [kycForm, setKycForm] = useState({ fullName: '', dob: '', address: '', idType: 'passport', idNumber: '' });
   const [amlForm, setAmlForm] = useState({ occupation: '', sourceOfFunds: 'salary', monthlyIncome: '', purposeOfAccount: 'personal' });
+  const [pinForm, setPinForm] = useState({ newPin: '', confirmPin: '' });
+  const [pinMsg, setPinMsg] = useState('');
 
   const Toggle = ({ value, onChange }) => (
     <button onClick={() => onChange(!value)}
@@ -23,14 +25,62 @@ export default function Profile({ onNavigate, showToast }) {
   };
 
   const SettingRow = ({ icon: Icon, label, right, onClick, border = true }) => (
-    <div onClick={onClick} className={`w-full flex items-center justify-between p-3.5 cursor-pointer active:bg-gray-50 dark:active:bg-white/5 ${border ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
+    <button type="button" onClick={onClick} style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }} className={`w-full flex items-center justify-between p-3.5 bg-transparent text-left active:bg-gray-50 dark:active:bg-white/5 ${border ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-gray-100 dark:bg-[#2C2C2E] rounded-lg flex items-center justify-center text-lumen-black dark:text-white"><Icon size={16} /></div>
         <span className="text-sm font-medium text-lumen-black dark:text-white">{label}</span>
       </div>
       {right || <Icons.ChevronRight size={16} className="text-gray-300" />}
-    </div>
+    </button>
   );
+
+  // Change PIN view
+  if (view === 'changePin') {
+    return (
+      <div className="h-full flex flex-col bg-white dark:bg-black">
+        <div className="sticky top-0 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800 px-5 py-3 z-30">
+          <div className="flex items-center justify-between">
+            <button onClick={() => { setView('main'); setPinMsg(''); setPinForm({ newPin: '', confirmPin: '' }); }}>
+              <Icons.ArrowLeft size={22} className="text-lumen-black dark:text-white" />
+            </button>
+            <h2 className="text-base font-bold text-lumen-black dark:text-white">Change PIN</h2>
+            <div className="w-6" />
+          </div>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-500">Enter a new 4–6 digit PIN for your account.</p>
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wider font-bold block mb-2">New PIN</label>
+            <input type="password" inputMode="numeric" maxLength={6} value={pinForm.newPin}
+              onChange={e => setPinForm(f => ({ ...f, newPin: e.target.value.replace(/\D/g,'') }))}
+              className="w-full bg-gray-100 dark:bg-[#1C1C1E] rounded-xl px-4 py-3 text-lumen-black dark:text-white text-lg font-mono tracking-[0.5em] text-center outline-none border-0"
+              placeholder="••••" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wider font-bold block mb-2">Confirm PIN</label>
+            <input type="password" inputMode="numeric" maxLength={6} value={pinForm.confirmPin}
+              onChange={e => setPinForm(f => ({ ...f, confirmPin: e.target.value.replace(/\D/g,'') }))}
+              className="w-full bg-gray-100 dark:bg-[#1C1C1E] rounded-xl px-4 py-3 text-lumen-black dark:text-white text-lg font-mono tracking-[0.5em] text-center outline-none border-0"
+              placeholder="••••" />
+          </div>
+          {pinMsg && <p className={`text-sm font-medium ${pinMsg.startsWith('PIN') ? 'text-green-600' : 'text-red-500'}`}>{pinMsg}</p>}
+          <motion.button whileTap={{ scale: 0.97 }}
+            onClick={async () => {
+              if (pinForm.newPin.length < 4) { setPinMsg('PIN must be at least 4 digits'); return; }
+              if (pinForm.newPin !== pinForm.confirmPin) { setPinMsg('PINs do not match'); return; }
+              try {
+                await changePin(pinForm.newPin);
+                setPinMsg('PIN changed successfully');
+                setTimeout(() => { setView('main'); setPinMsg(''); setPinForm({ newPin: '', confirmPin: '' }); }, 1500);
+              } catch (e) { setPinMsg('Error: ' + (e.message || 'try again')); }
+            }}
+            className="w-full py-3.5 bg-lumen-black dark:bg-white text-white dark:text-black rounded-2xl font-bold text-sm">
+            Set New PIN
+          </motion.button>
+        </div>
+      </div>
+    );
+  }
 
   // KYC Form View
   if (view === 'kyc') {
@@ -158,7 +208,8 @@ export default function Profile({ onNavigate, showToast }) {
           <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <SettingRow icon={Icons.Fingerprint} label={t('profile.biometric')} right={<Toggle value={biometric} onChange={setBiometric} />} />
             <SettingRow icon={Icons.Shield} label={t('profile.twoFactor')} right={<Toggle value={twoFactor} onChange={setTwoFactor} />} />
-            <SettingRow icon={Icons.Bell} label={t('profile.notifications')} right={<Toggle value={notifications} onChange={setNotifications} />} border={false} />
+            <SettingRow icon={Icons.Bell} label={t('profile.notifications')} right={<Toggle value={notifications} onChange={setNotifications} />} />
+            <SettingRow icon={Icons.Lock} label="Change PIN" onClick={() => setView('changePin')} border={false} />
           </div>
         </div>
 
@@ -166,10 +217,10 @@ export default function Profile({ onNavigate, showToast }) {
         <div>
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{t('profile.verification')}</h4>
           <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <SettingRow icon={Icons.FileText} label={t('profile.kyc')} onClick={() => setView('kyc')}
-              right={<div className="flex items-center gap-2"><StatusBadge status={kycStatus} /><Icons.ChevronRight size={14} className="text-gray-300" /></div>} />
-            <SettingRow icon={Icons.Shield} label={t('profile.aml')} onClick={() => setView('aml')}
-              right={<div className="flex items-center gap-2"><StatusBadge status={amlStatus} /><Icons.ChevronRight size={14} className="text-gray-300" /></div>} border={false} />
+            <SettingRow icon={Icons.Shield} label="Verification & KYC" onClick={() => onNavigate('/verification')}
+              right={<Icons.ChevronRight size={14} className="text-gray-300" />} />
+            <SettingRow icon={Icons.FileText} label="Settlement Orders" onClick={() => onNavigate('/contracts')}
+              right={<Icons.ChevronRight size={14} className="text-gray-300" />} border={false} />
           </div>
         </div>
 

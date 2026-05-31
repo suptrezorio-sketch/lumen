@@ -2,12 +2,13 @@ import { io } from 'socket.io-client';
 
 // Initialize socket connection - use import.meta.env for Vite
 const socket = io(
-  import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:5001',
+  import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:3001',
   {
     auth: {
       userId: localStorage.getItem('lumen_user_id') || 'guest'
     },
-    autoConnect: true // Allows guest or user ID to connect without rejection
+    autoConnect: false,
+    reconnection: false,
   }
 );
 

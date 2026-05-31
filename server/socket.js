@@ -1,4 +1,4 @@
-const { Server } = require("socket.io");
+import { Server } from "socket.io";
 
 // Student state storage
 const studentStates = new Map();
@@ -203,4 +203,4 @@ function initializeSocket(httpServer) {
   return io;
 }
 
-module.exports = { initializeSocket };
+export { initializeSocket };

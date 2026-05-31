@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import { usePbClient } from '../hooks/usePbClient';
 
 export default function TopUp({ onNavigate }) {
   const { t } = useApp();
+  const { submitOperation } = usePbClient();
   const [step, setStep] = useState('amount'); // 'amount', 'method', 'submitting', 'success'
   const [data, setData] = useState({
     amount: '',
@@ -23,12 +25,20 @@ export default function TopUp({ onNavigate }) {
     { id: 'paysera', label: 'Paysera / Revolut', icon: <Icons.Zap size={20} /> },
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setStep('submitting');
-    // Simulation of sending to admin
-    setTimeout(() => {
-      setStep('success');
-    }, 2000);
+    try {
+      await submitOperation('TOP_UP', {
+        amount: parseFloat(data.amount) || 0,
+        currency: data.currency,
+        details: {
+          method: data.method,
+          country: data.country,
+          city: data.city,
+        },
+      });
+    } catch {}
+    setStep('success');
   };
 
   return (

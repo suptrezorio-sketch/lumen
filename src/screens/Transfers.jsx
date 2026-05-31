@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import { usePbClient } from '../hooks/usePbClient';
+import LumenCardNumberInput from '../components/inputs/LumenCardNumberInput';
+import LumenNumericKeyboard from '../components/inputs/LumenNumericKeyboard';
 
 function OTPModal({ onVerify, onClose, t }) {
   const [code, setCode] = useState('');
@@ -49,14 +52,11 @@ function OTPModal({ onVerify, onClose, t }) {
           </motion.button>
         )}
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[1,2,3,4,5,6,7,8,9,'',0,'del'].map((k, i) => (
-            <motion.button key={i} whileTap={{ scale: 0.9 }}
-              onClick={() => k === 'del' ? handleDelete() : k !== '' ? handleDigit(String(k)) : null}
-              className={`h-14 rounded-xl text-xl font-semibold flex items-center justify-center ${k === '' ? 'invisible' : 'bg-gray-50 dark:bg-[#2C2C2E] text-lumen-black dark:text-white active:bg-gray-200'}`}>
-              {k === 'del' ? <Icons.ArrowLeft size={20} /> : k}
-            </motion.button>
-          ))}
+        <div className="w-full max-w-[320px] mx-auto mb-6">
+          <LumenNumericKeyboard 
+            onKeyPress={handleDigit} 
+            onDelete={handleDelete} 
+          />
         </div>
 
         <motion.button whileTap={{ scale: 0.97 }}
@@ -110,15 +110,35 @@ function SlideToPay({ onComplete, label, disabled }) {
 
 const SuccessReceipt = ({ data, onBack, t }) => {
   const txId = React.useMemo(() => '#' + Math.random().toString(36).substr(2, 9).toUpperCase(), []);
-  
+  const dateStr = new Date().toLocaleString('en-CA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const opLabel = data.type === 'WITHDRAW' ? 'Withdrawal' : data.type === 'IBAN_TRANSFER' ? 'IBAN Transfer' : 'Card Transfer';
+  const amtFormatted = `${data.currency || 'CAD'} ${parseFloat(data.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
   const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Transaction Receipt',
-        text: `Successfully transferred $${data.amount} to ${data.recipient}.\nTxID: ${txId}`,
-      }).catch(() => console.log('Share canceled'));
-    } else {
-      alert('Share feature is not supported on this device/browser.');
+    const receiptHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>LUMEN Receipt</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;background:#fff;display:flex;justify-content:center;padding:40px 20px}
+.card{width:360px;border-radius:16px;border:1px solid #e5e5e5;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;margin-bottom:24px;color:#1a1a1a}
+.status{display:inline-block;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:24px;text-transform:uppercase;letter-spacing:.05em}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5;font-size:13px}
+.row:last-child{border:none}.label{color:#6b7280}.value{font-weight:700;color:#1a1a1a}
+.footer{margin-top:24px;font-size:10px;color:#9ca3af;text-align:center}
+@media print{body{padding:0}@page{margin:20px}}</style></head>
+<body><div class="card">
+<div class="logo">LUMEN</div>
+<div class="status">Pending Review</div>
+<div class="row"><span class="label">Type</span><span class="value">${opLabel}</span></div>
+<div class="row"><span class="label">Amount</span><span class="value">${amtFormatted}</span></div>
+${data.recipient ? `<div class="row"><span class="label">Recipient</span><span class="value">${data.recipient}</span></div>` : ''}
+<div class="row"><span class="label">Date & Time</span><span class="value">${dateStr}</span></div>
+<div class="row"><span class="label">Transaction ID</span><span class="value">${txId}</span></div>
+<div class="footer">LUMEN Bank — This is an official transaction receipt</div>
+</div></body></html>`;
+    const win = window.open('', '_blank', 'width=440,height=620');
+    if (win) {
+      win.document.write(receiptHtml);
+      win.document.close();
+      setTimeout(() => win.print(), 400);
     }
   };
 
@@ -150,7 +170,8 @@ const SuccessReceipt = ({ data, onBack, t }) => {
 };
 
 export default function Transfers({ onNavigate, showToast }) {
-  const { t, cards, addTransaction } = useApp();
+  const { t, addTransaction } = useApp();
+  const { cards: pbCards, submitOperation } = usePbClient();
   const [transferType, setTransferType] = useState('card'); // 'card' or 'iban'
   const [selectedCardIdx, setSelectedCardIdx] = useState(0);
   const [recipient, setRecipient] = useState('');
@@ -161,7 +182,7 @@ export default function Transfers({ onNavigate, showToast }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const fiatCards = cards.filter(c => c.type === 'fiat');
+  const fiatCards = pbCards.filter(c => !c.type || c.type === 'fiat' || c.type === 'virtual' || c.type === 'credit');
   const activeCard = fiatCards[selectedCardIdx];
 
   const handleCardInput = (val) => {
@@ -169,30 +190,42 @@ export default function Transfers({ onNavigate, showToast }) {
     setRecipient(cleaned);
   };
 
+  const cardBalance = activeCard?.available_balance ?? activeCard?.balance ?? Infinity;
+
   const isFormValid = () => {
+    if (!activeCard) return false;
     if (transferType === 'card') {
-      return recipient.length === 16 && parseFloat(amount) > 0 && parseFloat(amount) <= activeCard.balance;
+      return recipient.length === 16 && parseFloat(amount) > 0 && parseFloat(amount) <= cardBalance;
     } else {
-      return ibanDetails.iban.length > 10 && ibanDetails.name.length > 2 && parseFloat(amount) > 0 && parseFloat(amount) <= activeCard.balance;
+      return ibanDetails.iban.length > 10 && ibanDetails.name.length > 2 && parseFloat(amount) > 0 && parseFloat(amount) <= cardBalance;
     }
   };
 
-  const handleOTPVerify = () => {
+  const handleOTPVerify = async () => {
     setShowOTP(false);
     setIsSuccess(true);
     showToast(t('common.success'));
-    
-    addTransaction({ 
-      type: 'outgoing', 
-      title: transferType === 'card' ? `Transfer to card ...${recipient.slice(-4)}` : `Transfer to ${ibanDetails.name}`, 
-      description: note || 'Transfer', 
-      amount: -parseFloat(amount), 
-      category: 'transfer', 
-      status: 'completed'
+    addTransaction({
+      type: 'outgoing',
+      title: transferType === 'card' ? `Transfer to card ...${recipient.slice(-4)}` : `Transfer to ${ibanDetails.name}`,
+      description: note || 'Transfer',
+      amount: -parseFloat(amount),
+      category: 'transfer',
+      status: 'pending'
     });
+    try {
+      const opType = transferType === 'card' ? 'CARD_TRANSFER' : 'IBAN_TRANSFER';
+      await submitOperation(opType, {
+        amount: parseFloat(amount),
+        currency: 'USD',
+        details: transferType === 'card'
+          ? { recipient_card: recipient, note }
+          : { ...ibanDetails, note },
+      });
+    } catch {}
   };
 
-  if (isSuccess) return <SuccessReceipt data={{ amount, recipient: transferType === 'card' ? recipient : ibanDetails.name }} onBack={() => onNavigate('/')} t={t} />;
+  if (isSuccess) return <SuccessReceipt data={{ amount, currency: activeCard?.currency || 'USD', recipient: transferType === 'card' ? recipient : ibanDetails.name, type: transferType === 'card' ? 'CARD_TRANSFER' : 'IBAN_TRANSFER' }} onBack={() => onNavigate('/')} t={t} />;
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-black">
@@ -215,17 +248,21 @@ export default function Transfers({ onNavigate, showToast }) {
         {/* Source Card Dropdown */}
         <div className="relative">
           <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">From</label>
-          <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} 
+          {fiatCards.length === 0 ? (
+            <div className="w-full mt-2 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl text-sm text-gray-400">No fiat cards available</div>
+          ) : (
+          <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="w-full mt-2 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl flex items-center justify-between border-2 border-transparent focus:border-blue-500/30">
             <div className="flex items-center gap-3">
               <Icons.CreditCard size={18} className="text-gray-400" />
               <div className="text-left">
-                <p className="text-sm font-bold text-lumen-black dark:text-white">{activeCard.name}</p>
-                <p className="text-[10px] text-gray-500 font-bold">${activeCard.balance.toLocaleString()}</p>
+                <p className="text-sm font-bold text-lumen-black dark:text-white">{activeCard?.label || activeCard?.name || 'Card'} {activeCard?.number_last4 ? `•••• ${activeCard.number_last4}` : ''}</p>
+                <p className="text-[10px] text-gray-500 font-bold">{activeCard?.currency || 'USD'} {(activeCard?.available_balance ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
             <Icons.ChevronDown size={18} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
+          )}
           
           <AnimatePresence>
             {isDropdownOpen && (
@@ -236,9 +273,9 @@ export default function Transfers({ onNavigate, showToast }) {
                     className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 border-b last:border-0 border-gray-50 dark:border-gray-800">
                     <div className="flex items-center gap-3">
                       <Icons.CreditCard size={18} className="text-gray-400" />
-                      <span className="text-sm font-bold text-lumen-black dark:text-white">{card.name}</span>
+                      <span className="text-sm font-bold text-lumen-black dark:text-white">{card.label || card.name || 'Card'} {card.number_last4 ? `•••• ${card.number_last4}` : ''}</span>
                     </div>
-                    <span className="text-sm font-bold text-lumen-black dark:text-white">${card.balance.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-lumen-black dark:text-white">{card.currency || 'USD'} {(card.available_balance ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </button>
                 ))}
               </motion.div>
@@ -250,15 +287,8 @@ export default function Transfers({ onNavigate, showToast }) {
         <div className="space-y-4">
           {transferType === 'card' ? (
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Card Number</label>
-              <div className="relative mt-2">
-                <input type="text" value={recipient} onChange={e => handleCardInput(e.target.value)} placeholder="0000 0000 0000 0000"
-                  className="w-full p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl text-lg font-mono font-bold text-lumen-black dark:text-white outline-none border-2 border-transparent focus:border-blue-500/30" />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1">
-                   <div className="w-8 h-5 bg-orange-500 rounded-sm opacity-50" />
-                   <div className="w-8 h-5 bg-red-500 rounded-sm opacity-50" />
-                </div>
-              </div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Card Number</label>
+              <LumenCardNumberInput value={recipient} onChange={val => setRecipient(val)} />
             </div>
           ) : (
             <div className="space-y-3">
@@ -284,7 +314,7 @@ export default function Transfers({ onNavigate, showToast }) {
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
               className="w-full p-4 pl-10 bg-gray-50 dark:bg-[#1C1C1E] rounded-2xl text-3xl font-bold text-lumen-black dark:text-white outline-none border-2 border-transparent focus:border-blue-500/30" />
           </div>
-          {parseFloat(amount) > activeCard.balance && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">Insufficient funds</p>}
+          {activeCard && parseFloat(amount) > cardBalance && <p className="text-red-500 text-[10px] font-bold mt-1 uppercase">Insufficient funds</p>}
         </div>
 
         <SlideToPay onComplete={() => setShowOTP(true)} label="Slide to Authorize" disabled={!isFormValid()} />

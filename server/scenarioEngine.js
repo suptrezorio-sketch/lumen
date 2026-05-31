@@ -1,130 +1,52 @@
 /**
- * Scenario Engine - JSON-based scenario definitions
- * Each scenario has triggers that can block API responses and emit socket events
+ * Scenario Engine v2 - Database-backed scenario definitions
+ * Loads active scenarios from Prisma DB and executes triggers
  */
 
-const SCENARIOS = {
-  // Scenario 1: Large transfer triggers security call
-  large_transfer_alert: {
-    id: 'large_transfer_alert',
-    name: 'Large Transfer Alert',
-    description: 'Triggers a security call when transfer exceeds threshold',
-    version: '1.0',
-    triggers: [
-      {
-        id: 'trigger_1',
-        condition: {
-          endpoint: 'POST /api/v1/transfers',
-          field: 'amount',
-          operator: 'gte',
-          value: 10000,
-        },
-        action: {
-          type: 'trigger_call',
-          payload: {
-            callerName: 'Fraud Prevention',
-            callerNumber: '+1 800-FRAUD',
-            callId: 'fraud_call_${timestamp}',
-          },
-        },
-        // Block the original API response
-        blockResponse: true,
-        blockStatus: 403,
-        blockMessage: 'Transfer blocked pending security verification',
-      },
-    ],
-  },
+import { prisma } from './lib/prisma.js';
 
-  // Scenario 2: First-time transfer shows OTP modal
-  first_time_transfer: {
-    id: 'first_time_transfer',
-    name: 'First Time Transfer OTP',
-    description: 'Requires OTP verification for first transfer',
-    version: '1.0',
-    triggers: [
-      {
-        id: 'trigger_2',
-        condition: {
-          endpoint: 'POST /api/v1/transfers',
-          field: 'isFirstTransfer',
-          operator: 'eq',
-          value: true,
-        },
-        action: {
-          type: 'show_modal',
-          payload: {
-            modalType: 'otp_verification',
-            title: 'Verify Your Identity',
-            message: 'Please enter the code sent to your device',
-            duration: 60000, // 60 seconds
-          },
-        },
-        // Don't block - just show modal alongside normal response
-        blockResponse: false,
-      },
-    ],
-  },
+// Fallback static scenarios (used when DB is unavailable)
+const FALLBACK_SCENARIOS = {};
 
-  // Scenario 3: Suspicious recipient triggers warning
-  suspicious_recipient: {
-    id: 'suspicious_recipient',
-    name: 'Suspicious Recipient Warning',
-    description: 'Shows warning for transfers to flagged accounts',
-    version: '1.0',
-    triggers: [
-      {
-        id: 'trigger_3',
-        condition: {
-          endpoint: 'POST /api/v1/transfers',
-          field: 'recipientAccount',
-          operator: 'in',
-          value: ['ACC-9999', 'ACC-8888', 'ACC-7777'], // Flagged accounts
-        },
-        action: {
-          type: 'show_modal',
-          payload: {
-            modalType: 'warning',
-            title: 'Warning: Suspicious Account',
-            message: 'This recipient has been flagged. Proceed with caution.',
-            confirmText: 'Proceed Anyway',
-            cancelText: 'Cancel Transfer',
-          },
-        },
-        blockResponse: false,
-      },
-    ],
-  },
-
-  // Scenario 4: Daily limit exceeded
-  daily_limit_exceeded: {
-    id: 'daily_limit_exceeded',
-    name: 'Daily Limit Exceeded',
-    description: 'Blocks transfer when daily limit is exceeded',
-    version: '1.0',
-    triggers: [
-      {
-        id: 'trigger_4',
-        condition: {
-          endpoint: 'POST /api/v1/transfers',
-          field: 'dailyTotal',
-          operator: 'gt',
-          value: 50000,
-        },
-        action: {
-          type: 'show_modal',
-          payload: {
-            modalType: 'error',
-            title: 'Daily Limit Exceeded',
-            message: 'You have exceeded your daily transfer limit of $50,000.',
-          },
-        },
-        blockResponse: true,
-        blockStatus: 403,
-        blockMessage: 'Daily transfer limit exceeded',
-      },
-    ],
-  },
-};
+/**
+ * Load all active scenarios from database with parsed steps
+ */
+async function loadActiveScenarios() {
+  try {
+    const dbScenarios = await prisma.scenario.findMany({
+      where: { status: 'active' },
+    });
+    const scenarios = {};
+    for (const s of dbScenarios) {
+      try {
+        const steps = JSON.parse(s.steps || '[]');
+        // Convert step-based scenarios to trigger format
+        const triggers = steps
+          .filter((step) => step.trigger)
+          .map((step, idx) => ({
+            id: `step_${idx + 1}`,
+            condition: step.trigger.condition || {},
+            action: step.trigger.action || {},
+            blockResponse: step.trigger.blockResponse || false,
+            blockStatus: step.trigger.blockStatus || 403,
+            blockMessage: step.trigger.blockMessage || 'Action blocked',
+          }));
+        scenarios[s.id] = {
+          id: s.id,
+          name: s.name,
+          description: s.description || '',
+          triggers,
+        };
+      } catch (e) {
+        console.warn(`[ScenarioEngine] Failed to parse scenario ${s.id}:`, e);
+      }
+    }
+    return scenarios;
+  } catch (e) {
+    console.error('[ScenarioEngine] DB error, using fallback:', e);
+    return FALLBACK_SCENARIOS;
+  }
+}
 
 // Condition operators
 const OPERATORS = {
@@ -174,13 +96,14 @@ function evaluateCondition(condition, requestData) {
 /**
  * Check all scenarios and return matching triggers
  */
-function findMatchingTriggers(endpoint, requestData) {
+function findMatchingTriggers(scenarios, endpoint, requestData) {
   const matchingTriggers = [];
 
-  for (const scenario of Object.values(SCENARIOS)) {
+  for (const scenario of Object.values(scenarios)) {
+    if (!scenario.triggers) continue;
     for (const trigger of scenario.triggers) {
       const { condition } = trigger;
-      
+
       // Check if endpoint matches
       if (condition.endpoint && condition.endpoint !== endpoint) {
         continue;
@@ -209,12 +132,15 @@ function scenarioEngine(io) {
       body: req.body,
       query: req.query,
       params: req.params,
-      user: req.user, // If authenticated
+      user: req.user,
       headers: req.headers,
     };
 
+    // Load active scenarios from DB
+    const scenarios = await loadActiveScenarios();
+
     // Find matching triggers
-    const matches = findMatchingTriggers(endpoint, requestData);
+    const matches = findMatchingTriggers(scenarios, endpoint, requestData);
 
     if (matches.length === 0) {
       // No triggers matched, proceed normally
@@ -280,9 +206,4 @@ function getUserSocket(userId, io) {
   return sockets.find(s => s.userId === userId);
 }
 
-module.exports = {
-  SCENARIOS,
-  scenarioEngine,
-  evaluateCondition,
-  findMatchingTriggers,
-};
+export { FALLBACK_SCENARIOS as SCENARIOS, scenarioEngine, evaluateCondition, findMatchingTriggers };

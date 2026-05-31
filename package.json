@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
@@ -16,11 +17,15 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
+    "ably": "^2.21.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.0.3",
     "lucide-react": "^1.16.0",
     "node-fetch": "^2.7.0",
+    "pocketbase": "^0.27.0",
+    "prisma": "^6.19.3",
+    "puppeteer": "^25.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.0",
@@ -32,9 +37,23 @@
     "@types/node": "^25.9.1",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "htmlhint": "^1.9.2",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.0",
     "vite-plugin-pwa": "^0.19.0"
-  }
+  },
+  "description": "Enable MCP-compatible AI agents to interact with Google Kubernetes Engine.",
+  "main": "postcss.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suptrezorio-sketch/lumen.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/suptrezorio-sketch/lumen/issues"
+  },
+  "homepage": "https://github.com/suptrezorio-sketch/lumen#readme"
 }

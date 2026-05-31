@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password      String
+  pin           String
+  balance       Float    @default(0)
+  btc           Float    @default(0)
+  eth           Float    @default(0)
+  usdt          Float    @default(0)
+  status        String   @default("pending")
+  kycStatus     String   @default("none") @map("kyc_status")
+  amlStatus     String   @default("none") @map("aml_status")
+  creditStatus  String   @default("none") @map("credit_status")
+  phone         String?
+  country       String   @default("US")
+  kycLevel      String   @default("basic") @map("kyc_level")
+  currentScenarioId String? @map("current_scenario_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  cards         Card[]
+  transactions  Transaction[]
+  documents     Document[]
+  creditRequests CreditRequest[]
+  messagesSent  Message[] @relation("MessagesSent")
+  messagesReceived Message[] @relation("MessagesReceived")
+  scenarioAssignments ScenarioAssignment[]
+  kycRecords    KycRecord[]
+
+  @@map("users")
+}
+
+model Card {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String
+  name          String
+  number        String   @unique
+  balance       Float    @default(0)
+  currency      String   @default("USD")
+  expiry        String?
+  holder        String?
+  cvv           String?
+  blocked       Boolean  @default(false)
+  frozen        Boolean  @default(false)
+  freezeReason  String?  @map("freeze_reason")
+  dailyLimit    Float?   @map("daily_limit")
+  monthlyLimit  Float?   @map("monthly_limit")
+  blocksCompleted Int    @default(0) @map("blocks_completed")
+  totalBlocks   Int?     @map("total_blocks")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cards")
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String
+  title         String
+  description   String?
+  amount        Float
+  date          DateTime @default(now())
+  category      String?
+  fee           Float    @default(0)
+  status        String   @default("processing")
+  txId          String?  @unique @map("tx_id")
+  recipientAccount String? @map("recipient_account")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Document {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String
+  fileUrl       String   @map("file_url")
+  status        String   @default("pending")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model CreditRequest {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  amount        Float
+  term          String
+  rate          Float
+  collateral    String?
+  collateralValue Float?   @map("collateral_value")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credit_requests")
+}
+
+model Message {
+  id            String   @id @default(uuid())
+  senderId      String?  @map("sender_id")
+  receiverId    String?  @map("receiver_id")
+  text          String
+  isAdmin       Boolean  @default(false) @map("is_admin")
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  sender        User?    @relation("MessagesSent", fields: [senderId], references: [id], onDelete: SetNull)
+  receiver      User?    @relation("MessagesReceived", fields: [receiverId], references: [id], onDelete: SetNull)
+
+  @@map("messages")
+}
+
+model Scenario {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  steps         String   // JSON string of steps
+  status        String   @default("draft")
+  createdBy     String?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assignments   ScenarioAssignment[]
+
+  @@map("scenarios")
+}
+
+model ScenarioAssignment {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  scenarioId    String   @map("scenario_id")
+  currentStep   Int      @default(0) @map("current_step")
+  status        String   @default("active")
+  startedAt     DateTime @default(now()) @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario      Scenario @relation(fields: [scenarioId], references: [id])
+
+  @@map("scenario_assignments")
+}
+
+model AudioRecording {
+  id            String   @id @default(uuid())
+  fileName      String   @map("file_name")
+  cdnUrl        String   @map("cdn_url")
+  duration      Int
+  character     String
+  department    String?
+  mood          String?
+  script        String?
+  triggerType   String   @default("manual") @map("trigger_type")
+  sizeBytes     Int?     @map("size_bytes")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("audio_recordings")
+}
+
+model KycRecord {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  seedPhraseHash String? @map("seed_phrase_hash")
+  questions     String?  // JSON
+  answers       String?  // JSON
+  documents     String?  // JSON
+  status        String   @default("pending")
+  reviewedBy    String?  @map("reviewed_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("kyc_records")
+}

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { Icons } from '../assets/Icons';
+import { usePbClient } from '../hooks/usePbClient';
 
 export default function Credit({ onNavigate }) {
   const { t, creditStatus, setCreditStatus } = useApp();
+  const { submitOperation } = usePbClient();
   const [amount, setAmount] = useState(10000);
   const [term, setTerm] = useState(12);
   const rate = 7.95;
@@ -13,23 +15,15 @@ export default function Credit({ onNavigate }) {
 
   const handleApply = async () => {
     try {
-      const userId = localStorage.getItem('lumen_user_id') || 'test-user';
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-      const res = await fetch(`${backendUrl}/api/credit/request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, amount, term, rate, collateral: 'None' })
-      }).catch(() => ({ ok: true })); // Fallback if server is down
-
-      if (res.ok) {
-        setCreditStatus('pending');
-        localStorage.setItem('lumen_credit', 'pending');
-        setTimeout(() => onNavigate('/'), 1500);
-      }
-    } catch (e) {
-      console.error('Credit request failed', e);
-      setCreditStatus('none');
-    }
+      await submitOperation('CREDIT_REQUEST', {
+        amount,
+        currency: 'CAD',
+        details: { term_months: term, rate_percent: rate, monthly_payment: monthly, total_payment: total },
+      });
+    } catch {}
+    setCreditStatus('pending');
+    localStorage.setItem('lumen_credit', 'pending');
+    setTimeout(() => onNavigate('/'), 1500);
   };
 
 
