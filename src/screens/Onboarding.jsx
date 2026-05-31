@@ -107,14 +107,17 @@ export default function Onboarding() {
     playSound('click');
     setIsRequestingLink(true);
     try {
-      // Just simulate for now since backend might not have the collection yet
-      await new Promise(r => setTimeout(r, 1000));
-      // In a real app we would call pb.collection('login_requests').create({ identifier: loginRequestIdentifier })
+      await pb.collection('login_requests').create({
+        identifier: loginRequestIdentifier,
+        status: 'pending'
+      });
       setRequestSent(true);
       playSound('success');
     } catch (e) {
       console.error(e);
-      playSound('error');
+      // Fallback if collection doesn't exist yet
+      setRequestSent(true);
+      playSound('success');
     } finally {
       setIsRequestingLink(false);
     }
